@@ -53,7 +53,7 @@ class Parameter:
             'X-Requested-With': 'XMLHttpRequest',
             'User-Agent': self.sess.user_agent
         }
-        r = self.sess.session.post(code_url, data=data, headers=headers)
+        r = self.sess.post(url=code_url, data=data, headers=headers)
         return r.text
 
     def _vjkl5(self, param):
@@ -73,7 +73,7 @@ class Parameter:
             "Upgrade-Insecure-Requests": "1",
             "User-Agent": self.sess.user_agent
         }
-        r = self.sess.session.get(url=url, headers=headers, timeout=10)
+        r = self.sess.get(url=url, headers=headers, timeout=10)
         try:
             vjkl5 = r.cookies["vjkl5"]
             return vjkl5

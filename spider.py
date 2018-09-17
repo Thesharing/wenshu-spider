@@ -61,18 +61,21 @@ class Spider:
                 "guid": param.guid
             }
 
-            req = self.sess.session.post(url, headers=headers, data=data)
+            req = self.sess.post(url=url, headers=headers, data=data)
             req.encoding = 'utf-8'
             return_data = req.text.replace('\\', '').replace('"[', '[').replace(']"', ']') \
                 .replace('＆ｌｄｑｕｏ;', '“').replace('＆ｒｄｑｕｏ;', '”')
 
             if return_data == '"remind"' or return_data == '"remind key"':
-                print('出现验证码', end='\r')
+                print('出现验证码')
                 CheckCode(sess=self.sess)
 
             else:
-                print(return_data)
-                json_data = json.loads(return_data)
+                try:
+                    json_data = json.loads(return_data)
+                except:
+                    print('JSON Error.')
+                    continue
                 if not len(json_data):
                     print('完成')
                     break
@@ -135,10 +138,10 @@ class Spider:
             'Origin': 'http://wenshu.court.gov.cn',
             'User-Agent': self.sess.user_agent,
         }
-        req = self.sess.session.get(url, headers=headers)
+        req = self.sess.get(url=url, headers=headers)
         req.encoding = 'utf-8'
         return_data = req.text.replace('\\', '')
-        with open('./content/{}.txt', 'w', encoding='utf-8') as f:
+        with open('./content/{}.txt'.format(doc_id), 'w', encoding='utf-8') as f:
             f.write(return_data)
         read_count = re.findall(r'"浏览：(\d*)次"', return_data)[0]
         court_title = re.findall(r'\"Title\":\"(.*?)\"', return_data)[0]
@@ -167,8 +170,8 @@ class Spider:
             'htmlName': parse.quote(name),
             'DocID': doc_id
         }
-        r = self.sess.session.post(url, headers=headers, data=data)
-        filename = './download/{}.doc'.format(name)
+        r = self.sess.post(url=url, headers=headers, data=data)
+        filename = './download/{}.doc'.format(doc_id)
         if os.path.exists(filename):
             print('{} 重复'.format(name))
         else:
@@ -201,7 +204,7 @@ class Spider:
             "guid": param.guid
         }
         while True:
-            r = self.sess.session.post(url, headers=headers, data=data)
+            r = self.sess.post(url=url, headers=headers, data=data)
             t = r.text.replace('\\', '').replace('"[', '[').replace(']"', ']')
             if t == '"remind"' or t == '"remind key"':
                 print('出现验证码', end='\r')

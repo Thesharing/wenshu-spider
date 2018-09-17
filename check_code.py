@@ -15,7 +15,7 @@ class CheckCode:
         try:
             self.check_code()
         except:
-            print('验证码处理时出错', end='\r')
+            print('验证码处理时出错')
 
     def check_code(self, code=None, flag=True):  # 是否传入验证码,是否第一次验证码错误
         """
@@ -30,14 +30,15 @@ class CheckCode:
                 'Origin': 'http://wenshu.court.gov.cn',
                 'User-Agent': self.sess.user_agent
             }
-            r = self.sess.session.get(check_code_url, headers=headers)
+            r = self.sess.get(url=check_code_url, headers=headers)
             pic_path = os.path.join(TEMP_PATH, 'checkCode.jpg')
             with open(pic_path, 'wb') as f:
                 f.write(r.content)
             # with open(TEMP_PATH + datetime.now().strftime('%Y-%m-%d %H-%M-%S-%f') + '.jpg', 'wb') as f:
             #     f.write(r.content)
-            code = self._distinguish(pic_path)
-        print('验证码为：{0}'.format(code) ,end='\r')
+            code = input('请输入验证码：')
+            # code = self._distinguish(pic_path)
+        print('验证码为：{0}'.format(code))
         check_url = 'http://wenshu.court.gov.cn/Content/CheckVisitCode'
         headers = {
             'Host': 'wenshu.court.gov.cn',
@@ -48,15 +49,15 @@ class CheckCode:
         data = {
             'ValidateCode': code
         }
-        req = self.sess.session.post(check_url, data=data, headers=headers)
+        req = self.sess.post(url=check_url, data=data, headers=headers)
         if req.text == '2':
-            print('验证码错误', end='\r')
+            print('验证码错误')
             if flag:
                 self.check_code(code, False)
             else:
                 self.check_code()
         else:
-            print('验证码正确：{0}'.format(code), end='\r')
+            print('验证码正确：{0}'.format(code))
 
     # 两张图片的相似程度
     @staticmethod
