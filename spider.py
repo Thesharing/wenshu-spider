@@ -8,6 +8,7 @@ from session import Session
 from config import Config
 from check_code import CheckCode
 from datetime import datetime, timedelta
+import logging
 
 MAX_PAGE = 10
 
@@ -25,6 +26,9 @@ class Spider:
     def content_list(self, param: Parameter, page, order, direction, index=1):
         """
         获取内容列表
+        page: 每页几条
+        order: 排序标准
+        direction: 顺序 (asc - 正序 desc - 倒序)
         """
 
         total = 0
@@ -32,7 +36,7 @@ class Spider:
 
         while True:
 
-            print('###### 第{0}页 ######'.format(index))
+            logging.info('第 {0} 页'.format(index))
 
             # 获取数据
             url = "http://wenshu.court.gov.cn/List/ListContent"
@@ -57,7 +61,7 @@ class Spider:
                 "Order": order,
                 "Direction": direction,
                 "vl5x": param.vl5x,
-                "number": param.number,
+                "number": param.number[0:4],
                 "guid": param.guid
             }
 
@@ -66,18 +70,20 @@ class Spider:
             return_data = req.text.replace('\\', '').replace('"[', '[').replace(']"', ']') \
                 .replace('＆ｌｄｑｕｏ;', '“').replace('＆ｒｄｑｕｏ;', '”')
 
+            print(return_data)
+
             if return_data == '"remind"' or return_data == '"remind key"':
-                print('出现验证码')
+                logging.warning('出现验证码')
                 CheckCode(sess=self.sess)
 
             else:
                 try:
                     json_data = json.loads(return_data)
                 except:
-                    print('JSON Error.')
+                    logging.info('JSON Error.')
                     continue
                 if not len(json_data):
-                    print('完成')
+                    logging.info('完成')
                     break
                 else:
                     run_eval = json_data[0]['RunEval']
@@ -173,11 +179,11 @@ class Spider:
         r = self.sess.post(url=url, headers=headers, data=data)
         filename = './download/{}.doc'.format(doc_id)
         if os.path.exists(filename):
-            print('{} 重复'.format(name))
+            logging.warning('{} 重复'.format(name))
         else:
             with open(filename, 'wb') as f:
                 f.write(r.content)
-            print('{} 已下载'.format(name))
+            logging.info('{} 已下载'.format(name))
 
     def tree_content(self, param: Parameter):
         """
@@ -207,7 +213,7 @@ class Spider:
             r = self.sess.post(url=url, headers=headers, data=data)
             t = r.text.replace('\\', '').replace('"[', '[').replace(']"', ']')
             if t == '"remind"' or t == '"remind key"':
-                print('出现验证码', end='\r')
+                logging.warning('出现验证码', end='\r')
                 CheckCode(sess=self.sess)
             else:
                 break
@@ -240,6 +246,7 @@ class Spider:
                 e = start + timedelta(days=(i + 1) * period_length[period])
                 if start_date is None or e > start_date:
                     info = self.tree_content(Parameter(param=str(config.date(s, e)), sess=self.sess))['裁判年份']
+                    print(s, e, info['IntValue'])
                     if info['IntValue'] < MAX_PAGE * 20 or period == quark:
                         yield s, e
                     else:

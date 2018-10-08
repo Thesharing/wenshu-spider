@@ -1,6 +1,8 @@
 import requests
 import random
 import time
+from error import NetworkException
+import logging
 
 user_agent_list = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.81 Safari/537.36',
@@ -26,31 +28,21 @@ class Session:
         return user_agent_list[random.randrange(0, len(user_agent_list))]
 
     def post(self, **kwargs):
-        max_error = 100
-        while max_error > 0:
-            try:
-                r = self.session.post(**kwargs)
-                if r.status_code != 200:
-                    print(r.status_code, 'Network Error, will wait 300s.')
-                    time.sleep(300)
-                else:
-                    return r
-            except:
-                print('Network Error')
-                time.sleep(10)
-                max_error -= 1
+        try:
+            r = self.session.post(**kwargs)
+            if r.status_code == 200:
+                return r
+            else:
+                raise NetworkException('Status Error: {0}.'.format(r.status_code))
+        except requests.exceptions.Timeout:
+            raise NetworkException('Connection Timeout.')
 
     def get(self, **kwargs):
-        max_error = 100
-        while max_error > 0:
-            try:
-                r = self.session.get(**kwargs)
-                if r.status_code != 200:
-                    print(r.status_code, 'Network Error, will wait 300s.')
-                    time.sleep(300)
-                else:
-                    return r
-            except:
-                print('Network Error')
-                time.sleep(10)
-                max_error -= 1
+        try:
+            r = self.session.get(**kwargs)
+            if r.status_code == 200:
+                return r
+            else:
+                raise NetworkException('Status Error: {0}.'.format(r.status_code))
+        except requests.exceptions.Timeout:
+            raise NetworkException('Connection Timeout.')

@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from session import Session
 import os
+import logging
 
 from datetime import datetime
 
@@ -15,7 +16,7 @@ class CheckCode:
         try:
             self.check_code()
         except:
-            print('验证码处理时出错')
+            logging.error('验证码处理时出错')
 
     def check_code(self, code=None, flag=True):  # 是否传入验证码,是否第一次验证码错误
         """
@@ -38,7 +39,7 @@ class CheckCode:
             #     f.write(r.content)
             code = input('请输入验证码：')
             # code = self._distinguish(pic_path)
-        print('验证码为：{0}'.format(code))
+        logging.info('验证码为：{0}'.format(code))
         check_url = 'http://wenshu.court.gov.cn/Content/CheckVisitCode'
         headers = {
             'Host': 'wenshu.court.gov.cn',
@@ -51,13 +52,13 @@ class CheckCode:
         }
         req = self.sess.post(url=check_url, data=data, headers=headers)
         if req.text == '2':
-            print('验证码错误')
+            logging.error('验证码错误')
             if flag:
                 self.check_code(code, False)
             else:
                 self.check_code()
         else:
-            print('验证码正确：{0}'.format(code))
+            logging.info('验证码正确：{0}'.format(code))
 
     # 两张图片的相似程度
     @staticmethod
