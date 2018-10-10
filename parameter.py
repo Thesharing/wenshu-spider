@@ -6,7 +6,7 @@ from session import Session
 
 class Parameter:
 
-    def __init__(self, param: str, sess: Session = Session()):
+    def __init__(self, param: str, sess: Session):
         self.sess = sess
         self.param = param
 

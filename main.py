@@ -2,7 +2,8 @@ from parameter import Parameter
 from session import Session
 from config import Config
 from spider import Spider
-from error import NetworkException
+from error import NetworkException, CheckCodeError
+from json import JSONDecodeError
 
 from datetime import datetime
 # import time, random
@@ -20,7 +21,7 @@ if __name__ == '__main__':
     start = False
     for dist in spider.district(config=c):
         if not start:
-            if dist == '新疆维吾尔自治区':
+            if dist == '云南省':
                 start = True
             else:
                 continue
@@ -28,11 +29,13 @@ if __name__ == '__main__':
         c1 = c.district(dist)
         # retry if encounter network error
         dist_success = False
+        first_retry_time = 5
         while not dist_success:
             try:
                 for d in spider.time_interval(config=c1):
-                    logging.info((dist, d[0].strftime('%Y-%m-%d'), d[1].strftime('%Y-%m-%d')))
+                    logging.info('{0} {1} {2}'.format(dist, d[0].strftime('%Y-%m-%d'), d[1].strftime('%Y-%m-%d')))
                     time_success = False
+                    second_retry_time = 5
                     while not time_success:
                         try:
                             for item in spider.content_list(param=Parameter(param=str(c1.date(d[0], d[1])), sess=s), page=20,
@@ -44,10 +47,18 @@ if __name__ == '__main__':
                                 # except:
                                 #     print(item['id'], file=error_log)
                             time_success = True
-                        except NetworkException as e:
-                            logging.error('Error when fetch content list: {0}'.format(e.value))
+                        except (NetworkException, CheckCodeError, JSONDecodeError) as e:
+                            logging.error('Error when fetch content list: {0}'.format(str(e)))
+                            second_retry_time -= 1
+                            if second_retry_time <= 0:
+                                s.switch_proxy()
+                                second_retry_time = 5
                 dist_success = True
-            except NetworkException as e:
-                logging.error('Error when fetch time interval: {0}'.format(e.value))
+            except (NetworkException, CheckCodeError, JSONDecodeError) as e:
+                logging.error('Error when fetch time interval: {0}'.format(str(e)))
+                first_retry_time -= 1
+                if first_retry_time <= 0:
+                    s.switch_proxy()
+                    first_retry_time = 5
     data_log.close()
     # error_log.close()

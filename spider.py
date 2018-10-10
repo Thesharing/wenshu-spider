@@ -3,19 +3,21 @@ import execjs
 import re
 import os
 from urllib import parse
+from datetime import datetime, timedelta
+import logging
+
 from parameter import Parameter
 from session import Session
 from config import Config
 from check_code import CheckCode
-from datetime import datetime, timedelta
-import logging
+from error import CheckCodeError
 
 MAX_PAGE = 10
 
 
 class Spider:
 
-    def __init__(self, sess: Session = Session()):
+    def __init__(self, sess: Session):
 
         self.sess = sess
 
@@ -70,11 +72,10 @@ class Spider:
             return_data = req.text.replace('\\', '').replace('"[', '[').replace(']"', ']') \
                 .replace('＆ｌｄｑｕｏ;', '“').replace('＆ｒｄｑｕｏ;', '”')
 
-            print(return_data)
-
             if return_data == '"remind"' or return_data == '"remind key"':
                 logging.warning('出现验证码')
-                CheckCode(sess=self.sess)
+                raise CheckCodeError('CheckCode Appeared in content_list')
+                # CheckCode(sess=self.sess)
 
             else:
                 try:
@@ -214,7 +215,9 @@ class Spider:
             t = r.text.replace('\\', '').replace('"[', '[').replace(']"', ']')
             if t == '"remind"' or t == '"remind key"':
                 logging.warning('出现验证码', end='\r')
-                CheckCode(sess=self.sess)
+                raise CheckCodeError('CheckCode Appeared in tree_content')
+                # CheckCode(sess=self.sess)
+
             else:
                 break
         json_data = json.loads(t)
@@ -246,7 +249,6 @@ class Spider:
                 e = start + timedelta(days=(i + 1) * period_length[period])
                 if start_date is None or e > start_date:
                     info = self.tree_content(Parameter(param=str(config.date(s, e)), sess=self.sess))['裁判年份']
-                    print(s, e, info['IntValue'])
                     if info['IntValue'] < MAX_PAGE * 20 or period == quark:
                         yield s, e
                     else:

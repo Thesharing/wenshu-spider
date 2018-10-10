@@ -11,7 +11,7 @@ TEMP_PATH = './temp/'
 
 class CheckCode:
 
-    def __init__(self, sess: Session = Session()):
+    def __init__(self, sess: Session):
         self.sess = sess
         try:
             self.check_code()
