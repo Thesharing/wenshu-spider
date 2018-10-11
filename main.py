@@ -19,7 +19,13 @@ if __name__ == '__main__':
     total_success = False
     while not total_success:
         try:
+            start = False
             for dist in spider.district(config=c):
+                if not start:
+                    if dist == '黑龙江省':
+                        start = True
+                    else:
+                        continue
                 logging.info(dist)
                 c1 = c.district(dist)
                 dist_success = False
