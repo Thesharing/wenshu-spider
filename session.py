@@ -22,16 +22,20 @@ class Session:
 
     def __init__(self):
         self.session = requests.Session()
-        self.proxy = {'http': 'http://' + self._get_proxy()}
+        self.proxy = self._get_proxy()
 
     @property
     def user_agent(self):
         return user_agent_list[random.randrange(0, len(user_agent_list))]
 
+    @property
+    def proxies(self):
+        return {'http': 'http://' + self.proxy}
+
     def post(self, **kwargs):
         # 不能在这里重试，每当更换代理时都需要重新从头开始请求
         try:
-            r = self.session.post(proxies=self.proxy, **kwargs)
+            r = self.session.post(proxies=self.proxies, **kwargs)
             if r.status_code == 200:
                 return r
             else:
@@ -43,7 +47,7 @@ class Session:
 
     def get(self, **kwargs):
         try:
-            r = self.session.get(proxies=self.proxy, **kwargs)
+            r = self.session.get(proxies=self.proxies, **kwargs)
             if r.status_code == 200:
                 return r
             else:
@@ -64,5 +68,10 @@ class Session:
                 logging.info('Proxy changed to {0}'.format(r.text))
                 return r.text
 
+    @staticmethod
+    def _del_proxy(proxy):
+        requests.get('http://127.0.0.1:5010/delete/?proxy={0}'.format(proxy))
+
     def switch_proxy(self):
-        self.proxy['http'] = 'http://' + self._get_proxy()
+        self._del_proxy(self.proxy)
+        self.proxy = self._get_proxy()
