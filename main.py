@@ -2,7 +2,7 @@ from parameter import Parameter
 from session import Session
 from config import Config
 from spider import Spider
-from error import error_list
+from error import ErrorList
 from datetime import datetime
 import logging
 
@@ -47,21 +47,21 @@ if __name__ == '__main__':
                                         # except:
                                         #     print(item['id'], file=error_log)
                                     time_success = True
-                                except error_list as e:
+                                except ErrorList as e:
                                     logging.error('Error when fetch content list: {0}'.format(str(e)))
                                     second_retry_time -= 1
                                     if second_retry_time <= 0:
                                         s.switch_proxy()
                                         second_retry_time = 5
                         dist_success = True
-                    except error_list as e:
+                    except ErrorList as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
                         first_retry_time -= 1
                         if first_retry_time <= 0:
                             s.switch_proxy()
                             first_retry_time = 5
             total_success = True
-        except error_list as e:
+        except ErrorList as e:
             logging.error('Error when fetch dist information: {0}'.format(str(e)))
             s.switch_proxy()
     data_log.close()

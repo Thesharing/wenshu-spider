@@ -21,4 +21,4 @@ class CheckCodeError(Exception):
         return self.value
 
 
-error_list = (NetworkException, CheckCodeError, JSONDecodeError, KeyError, IndexError)
+ErrorList = (NetworkException, CheckCodeError, JSONDecodeError, KeyError, IndexError)
