@@ -13,7 +13,8 @@ if __name__ == '__main__':
                         level=logging.INFO,
                         handlers=[
                             logging.FileHandler(
-                                './log/log {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))),
+                                './log/log {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')),
+                                encoding='utf-8', mode='a'),
                             logging.StreamHandler()])
 
     if os.path.isfile('dist.txt'):
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     s = Session()
     c = Config()
     spider = Spider(sess=s)
-    data_log = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'w', encoding='utf-8')
+    data_log = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
     total_success = False
     while not total_success:
         try:
