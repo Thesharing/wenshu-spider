@@ -9,11 +9,15 @@ import logging
 if __name__ == '__main__':
 
     logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
-                        level=logging.INFO)
+                        level=logging.INFO,
+                        handlers=[
+                            logging.FileHandler(
+                                './log/log {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))),
+                            logging.StreamHandler()])
     s = Session()
     c = Config()
     spider = Spider(sess=s)
-    data_log = open('./log/data-{}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'w', encoding='utf-8')
+    data_log = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'w', encoding='utf-8')
     total_success = False
     while not total_success:
         try:

@@ -2,5 +2,6 @@ log
 temp
 content
 download
+data
 .idea
 __pycache__

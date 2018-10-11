@@ -1,4 +1,5 @@
 from json import JSONDecodeError
+from requests.exceptions import ChunkedEncodingError
 
 
 class NetworkException(Exception):
@@ -21,4 +22,4 @@ class CheckCodeError(Exception):
         return self.value
 
 
-ErrorList = (NetworkException, CheckCodeError, JSONDecodeError, KeyError, IndexError)
+ErrorList = (NetworkException, CheckCodeError, JSONDecodeError, KeyError, IndexError, ChunkedEncodingError)
