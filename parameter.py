@@ -3,6 +3,7 @@ import execjs
 from urllib import parse
 from session import Session
 
+from error import NetworkException
 
 class Parameter:
 
@@ -73,12 +74,15 @@ class Parameter:
             "Upgrade-Insecure-Requests": "1",
             "User-Agent": self.sess.user_agent
         }
-        r = self.sess.get(url=url, headers=headers, timeout=10)
-        try:
-            vjkl5 = r.cookies["vjkl5"]
-            return vjkl5
-        except:
-            return self._vjkl5(param)
+        retry_time = 5
+        while retry_time > 0:
+            r = self.sess.get(url=url, headers=headers, timeout=10)
+            try:
+                vjkl5 = r.cookies["vjkl5"]
+                return vjkl5
+            except:
+                retry_time -= 1
+        raise NetworkException('Cannot find vjkl5 in cookies.')
 
     def _vl5x(self):
         return self.js_vl5x.call('GetVl5x', self.vjkl5)
