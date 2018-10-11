@@ -19,7 +19,7 @@ if __name__ == '__main__':
     if os.path.isfile('dist.txt'):
         with open('dist.txt', 'r', encoding='utf-8') as f:
             start_dist = f.read().strip()
-            logging.info('从{}开始抓取'.format(start_dist))
+            logging.info('Start from {}'.format(start_dist))
     else:
         start_dist = None
 
