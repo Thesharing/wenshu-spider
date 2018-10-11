@@ -36,6 +36,7 @@ class Session:
         # 不能在这里重试，每当更换代理时都需要重新从头开始请求
         try:
             r = self.session.post(proxies=self.proxies, **kwargs)
+            # r = self.session.post(**kwargs)
             if r.status_code == 200:
                 return r
             else:
@@ -44,10 +45,13 @@ class Session:
             raise NetworkException('Connection timeout.')
         except requests.exceptions.ProxyError:
             raise NetworkException('Proxy connection refused.')
+        except requests.exceptions.ConnectionError:
+            raise NetworkException('Connection refused.')
 
     def get(self, **kwargs):
         try:
             r = self.session.get(proxies=self.proxies, **kwargs)
+            # r = self.session.get(**kwargs)
             if r.status_code == 200:
                 return r
             else:
@@ -56,6 +60,8 @@ class Session:
             raise NetworkException('Connection timeout.')
         except requests.exceptions.ProxyError:
             raise NetworkException('Proxy connection refused.')
+        except requests.exceptions.ConnectionError:
+            raise NetworkException('Connection refused.')
 
     @staticmethod
     def _get_proxy():

@@ -6,7 +6,6 @@ from error import NetworkException, CheckCodeError
 from json import JSONDecodeError
 
 from datetime import datetime
-# import time, random
 import logging
 
 if __name__ == '__main__':
@@ -16,18 +15,10 @@ if __name__ == '__main__':
     s = Session()
     c = Config()
     spider = Spider(sess=s)
-    # error_log = open('./log/error-{}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'w', encoding='utf-8')
     data_log = open('./log/data-{}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'w', encoding='utf-8')
-    start = False
     for dist in spider.district(config=c):
-        if not start:
-            if dist == '云南省':
-                start = True
-            else:
-                continue
         logging.info(dist)
         c1 = c.district(dist)
-        # retry if encounter network error
         dist_success = False
         first_retry_time = 5
         while not dist_success:
@@ -38,8 +29,8 @@ if __name__ == '__main__':
                     second_retry_time = 5
                     while not time_success:
                         try:
-                            for item in spider.content_list(param=Parameter(param=str(c1.date(d[0], d[1])), sess=s), page=20,
-                                                            order='法院层级', direction='asc'):
+                            for item in spider.content_list(param=Parameter(param=str(c1.date(d[0], d[1])), sess=s),
+                                                            page=20, order='法院层级', direction='asc'):
                                 print(item, file=data_log)
                                 # print(item['id'], item['name'])
                                 # try:
@@ -61,4 +52,3 @@ if __name__ == '__main__':
                     s.switch_proxy()
                     first_retry_time = 5
     data_log.close()
-    # error_log.close()
