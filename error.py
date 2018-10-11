@@ -1,3 +1,6 @@
+from json import JSONDecodeError
+
+
 class NetworkException(Exception):
 
     def __init__(self, value):
@@ -16,3 +19,6 @@ class CheckCodeError(Exception):
 
     def __str__(self):
         return self.value
+
+
+error_list = (NetworkException, CheckCodeError, JSONDecodeError, KeyError, IndexError)
