@@ -4,6 +4,7 @@ from config import Config
 from spider import Spider
 from error import ErrorList
 from datetime import datetime
+import os
 import logging
 
 if __name__ == '__main__':
@@ -14,6 +15,14 @@ if __name__ == '__main__':
                             logging.FileHandler(
                                 './log/log {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S'))),
                             logging.StreamHandler()])
+
+    if os.path.isfile('dist.txt'):
+        with open('dist.txt', 'r', encoding='utf-8') as f:
+            start_dist = f.read().strip()
+            logging.info('从{}开始抓取'.format(start_dist))
+    else:
+        start_dist = None
+
     s = Session()
     c = Config()
     spider = Spider(sess=s)
@@ -21,10 +30,14 @@ if __name__ == '__main__':
     total_success = False
     while not total_success:
         try:
-            start = False
+            if start_dist is not None:
+                start = False
+            else:
+                start = True
+
             for dist in spider.district(config=c):
                 if not start:
-                    if dist == '黑龙江省':
+                    if dist == start_dist:
                         start = True
                     else:
                         continue

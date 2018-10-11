@@ -3,5 +3,6 @@ temp
 content
 download
 data
+dist.txt
 .idea
 __pycache__
