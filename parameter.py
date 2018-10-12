@@ -76,7 +76,7 @@ class Parameter:
         }
         retry_time = 5
         while retry_time > 0:
-            r = self.sess.get(url=url, headers=headers, timeout=10)
+            r = self.sess.get(url=url, headers=headers)
             try:
                 vjkl5 = r.cookies["vjkl5"]
                 return vjkl5
