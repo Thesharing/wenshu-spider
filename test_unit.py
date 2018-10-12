@@ -4,6 +4,7 @@ from config import Config
 from spider import Spider
 from datetime import datetime
 import execjs
+import logging
 
 
 def test_vl5x(vjkl5):
@@ -27,6 +28,10 @@ def test_spider():
                                                                               datetime(2018, 9, 15)))),
                                  page=20, order='法院层级', direction='asc'):
         print(i)
+
+
+def test_logging():
+    logging.info('Test')
 
 
 if __name__ == '__main__':
