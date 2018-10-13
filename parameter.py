@@ -5,6 +5,7 @@ from session import Session
 
 from error import NetworkException
 
+
 class Parameter:
 
     def __init__(self, param: str, sess: Session):
@@ -29,6 +30,7 @@ class Parameter:
         """
         生成GUID
         """
+
         def create_guid():
             return str(hex((int(((1 + random.random()) * 0x10000)) | 0)))[3:]
 

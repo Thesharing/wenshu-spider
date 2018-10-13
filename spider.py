@@ -36,6 +36,8 @@ class Spider:
         total = 0
         count = 0
 
+        json_error_retry_time = 5
+
         while True:
 
             logging.info('第 {0} 页'.format(index))
@@ -80,8 +82,16 @@ class Spider:
             else:
                 try:
                     json_data = json.loads(return_data)
-                except:
-                    logging.info('JSON Error.')
+                    json_error_retry_time = 5
+                except Exception as e:
+                    logging.error('JSON Error: {}.'.format(str(e)))
+                    # If there are 5 JSON errors, skip this page
+                    json_error_retry_time -= 1
+                    if json_error_retry_time == 0:
+                        logging.critical('Skip the page {} for so many json errors.'.format(index))
+                        index += 1
+                        if index > MAX_PAGE or (total != 0 and count >= total):
+                            break
                     continue
                 if not len(json_data):
                     logging.info('完成')
