@@ -45,8 +45,8 @@ if __name__ == '__main__':
                 start = True
 
             # log the distribution of district
-            with open('district.txt', 'w', encoding='utf-8') as f:
-                print(json.dumps(spider.district(config=c)), file=f)
+            with open('district_list.txt', 'w', encoding='utf-8') as f:
+                print(json.dumps(spider.district(config=c), ensure_ascii=False), file=f)
 
             for dist in spider.district(config=c):
                 if not start:
