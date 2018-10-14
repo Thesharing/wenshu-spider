@@ -9,7 +9,6 @@ import logging
 from parameter import Parameter
 from session import Session
 from config import Config
-from check_code import CheckCode
 from error import CheckCodeError
 
 MAX_PAGE = 10
@@ -25,7 +24,7 @@ class Spider:
             js = f.read()
             self.js_docid = execjs.compile(js)
 
-    def content_list(self, param: Parameter, page, order, direction, index=1):
+    def content_list(self, param: Parameter, page, order, direction, index=1) -> (dict, int):
         """
         获取内容列表
         page: 每页几条
@@ -75,7 +74,6 @@ class Spider:
                 .replace('＆ｌｄｑｕｏ;', '“').replace('＆ｒｄｑｕｏ;', '”')
 
             if return_data == '"remind"' or return_data == '"remind key"':
-                logging.warning('出现验证码')
                 raise CheckCodeError('CheckCode Appeared in content_list')
                 # CheckCode(sess=self.sess)
 
@@ -121,7 +119,7 @@ class Spider:
                             proc=trial_proc,
                             text=full_text
                         )
-                        yield data_dict
+                        yield data_dict, index
 
                 index += 1
 

@@ -23,6 +23,7 @@ class Session:
     def __init__(self):
         self.session = requests.Session()
         self.proxy = self._get_proxy()
+        self.TIMEOUT = 60
 
     @property
     def user_agent(self):
@@ -35,7 +36,7 @@ class Session:
     def post(self, **kwargs):
         # 不能在这里重试，每当更换代理时都需要重新从头开始请求
         try:
-            r = self.session.post(proxies=self.proxies, timeout=20, **kwargs)
+            r = self.session.post(proxies=self.proxies, timeout=self.TIMEOUT, **kwargs)
             # r = self.session.post(**kwargs)
             if r.status_code == 200:
                 return r
@@ -50,7 +51,7 @@ class Session:
 
     def get(self, **kwargs):
         try:
-            r = self.session.get(proxies=self.proxies, timeout=20, **kwargs)
+            r = self.session.get(proxies=self.proxies, timeout=self.TIMEOUT, **kwargs)
             # r = self.session.get(**kwargs)
             if r.status_code == 200:
                 return r
