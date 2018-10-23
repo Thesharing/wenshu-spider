@@ -3,14 +3,15 @@ from session import Session
 from config import Config
 from spider import Spider
 from error import ErrorList
+from util import CustomJsonDecoder
 from datetime import datetime
 import os
 import logging
 import sys
 import json
 
-if __name__ == '__main__':
 
+def main():
     if sys.version_info.major < 3 or sys.version_info.minor < 5:
         print('Python >= 3.5 is required, you are using {}.{}.'.format(sys.version_info.major, sys.version_info.minor))
         exit(1)
@@ -23,12 +24,21 @@ if __name__ == '__main__':
                                 encoding='utf-8', mode='a'),
                             logging.StreamHandler()])
 
-    if os.path.isfile('dist.txt'):
-        with open('dist.txt', 'r', encoding='utf-8') as f:
-            start_dist = f.read().strip()
-            logging.info('Start from {}'.format(start_dist))
-    else:
-        start_dist = None
+    start_dist, start_date = None, None
+    if os.path.isfile('start.json'):
+        with open('start.json', 'r', encoding='utf-8') as f:
+            try:
+                decoder = CustomJsonDecoder()
+                start_info = decoder.decode(f.read().strip())
+                if 'district' in start_info and start_info['district'] is not None:
+                    start_dist = start_info['district']
+                    logging.info('Start District: {}'.format(start_dist))
+                if 'date' in start_info and start_info['date'] is not None:
+                    start_date = start_info['date']
+                    logging.info('Start Date: {}'.format(start_date.strftime("%Y-%m-%d")))
+            except (json.decoder.JSONDecodeError, KeyError, ValueError):
+                logging.error(
+                    'Format of start.json is incorrect, which should be: {"district": "xx省", "date": "xxxx-xx-xx"}')
 
     RETRY_TIME = 10
 
@@ -58,11 +68,14 @@ if __name__ == '__main__':
                 c1 = c.district(dist)
                 dist_success = False
                 first_retry_time = RETRY_TIME
-                start_date = None  # if time_interval is interrupted, continue from the start_date
+                cur_date = None  # if time_interval is interrupted, continue from the start_date
+                if start_date is not None:
+                    cur_date = start_date
+                    start_date = None
                 while not dist_success:
                     try:
-                        for d in spider.time_interval(config=c1, start_date=start_date):
-                            start_date = d[0]
+                        for d in spider.time_interval(config=c1, start_date=cur_date):
+                            cur_date = d[0]
                             logging.info(
                                 '{0} {1} {2}'.format(dist, d[0].strftime('%Y-%m-%d'), d[1].strftime('%Y-%m-%d')))
                             time_success = False
@@ -99,3 +112,7 @@ if __name__ == '__main__':
             logging.error('Error when fetch dist information: {0}'.format(str(e)))
             s.switch_proxy()
     data_log.close()
+
+
+if __name__ == '__main__':
+    main()

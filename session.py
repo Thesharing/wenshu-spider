@@ -87,5 +87,6 @@ class Session:
         requests.get('http://127.0.0.1:5010/delete/?proxy={0}'.format(proxy))
 
     def switch_proxy(self):
-        self._del_proxy(self.proxy)
-        self.proxy = self._get_proxy()
+        if PROXY:
+            self._del_proxy(self.proxy)
+            self.proxy = self._get_proxy()

@@ -5,6 +5,7 @@ from spider import Spider
 from datetime import datetime
 import execjs
 import logging
+from util import CustomJsonEncoder, CustomJsonDecoder
 
 
 def test_vl5x(vjkl5):
@@ -34,5 +35,20 @@ def test_logging():
     logging.info('Test')
 
 
+def test_util():
+    e = CustomJsonEncoder()
+    d = CustomJsonDecoder()
+    t = {
+        'district': '山西省',
+        'date': '2018-10-01'
+    }
+    s = e.encode(t)
+    print(s)
+    t = d.decode(s)
+    print(t)
+
+
 if __name__ == '__main__':
-    test_vl5x('e4990be99ff3262f6013418f1b9f22f73cb3fa78')
+    d = CustomJsonDecoder()
+    print(d.decode('{"district": "陕西省", "date": "2018-01-10"}'))
+    # test_util()
