@@ -7,3 +7,4 @@ start.json
 district_list.txt
 .idea
 __pycache__
+.pytest_cache
