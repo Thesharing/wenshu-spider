@@ -11,7 +11,7 @@ import sys
 import json
 
 
-def main():
+def prepare():
     if sys.version_info.major < 3 or sys.version_info.minor < 5:
         print('Python >= 3.5 is required, you are using {}.{}.'.format(sys.version_info.major, sys.version_info.minor))
         exit(1)
@@ -40,12 +40,17 @@ def main():
                 logging.error(
                     'Format of start.json is incorrect, which should be: {"district": "xx省", "date": "xxxx-xx-xx"}')
 
-    RETRY_TIME = 10
+    retry_time = 10
+    data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
 
+    return start_dist, start_date, retry_time, data_file
+
+
+def crawl_by_district(start_dist, start_date, retry_time, data_file):
     s = Session()
     c = Config()
     spider = Spider(sess=s)
-    data_log = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
+
     total_success = False
     while not total_success:
         try:
@@ -56,7 +61,7 @@ def main():
 
             # log the distribution of district
             with open('district_list.txt', 'w', encoding='utf-8') as f:
-                print(json.dumps(spider.district(config=c), ensure_ascii=False), file=f)
+                print(json.dumps(list(spider.district(config=c)), ensure_ascii=False), file=f)
 
             for dist in spider.district(config=c):
                 if not start:
@@ -67,7 +72,7 @@ def main():
                 logging.info(dist)
                 c1 = c.district(dist)
                 dist_success = False
-                first_retry_time = RETRY_TIME
+                first_retry_time = retry_time
                 cur_date = None  # if time_interval is interrupted, continue from the start_date
                 if start_date is not None:
                     cur_date = start_date
@@ -75,18 +80,19 @@ def main():
                 while not dist_success:
                     try:
                         for d in spider.time_interval(config=c1, start_date=cur_date):
-                            cur_date = d[0]
                             logging.info(
-                                '{0} {1} {2}'.format(dist, d[0].strftime('%Y-%m-%d'), d[1].strftime('%Y-%m-%d')))
+                                '{0} {1} {2} {3}'.format(dist, d[0].strftime('%Y-%m-%d'), d[1].strftime('%Y-%m-%d'),
+                                                         d[2]))
+                            cur_date = d[0]
                             time_success = False
-                            second_retry_time = RETRY_TIME
+                            second_retry_time = retry_time
                             index = 1
                             while not time_success:
                                 try:
                                     for item, idx in spider.content_list(
                                             param=Parameter(param=str(c1.date(d[0], d[1])), sess=s),
                                             page=20, order='法院层级', direction='asc', index=index):
-                                        print(item, file=data_log)
+                                        print(item, file=data_file)
                                         index = idx
                                         # print(item['id'], item['name'])
                                         # try:
@@ -99,20 +105,20 @@ def main():
                                     second_retry_time -= 1
                                     if second_retry_time <= 0:
                                         s.switch_proxy()
-                                        second_retry_time = RETRY_TIME
+                                        second_retry_time = retry_time
                         dist_success = True
                     except ErrorList as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
                         first_retry_time -= 1
                         if first_retry_time <= 0:
                             s.switch_proxy()
-                            first_retry_time = RETRY_TIME
+                            first_retry_time = retry_time
             total_success = True
         except ErrorList as e:
             logging.error('Error when fetch dist information: {0}'.format(str(e)))
             s.switch_proxy()
-    data_log.close()
+    data_file.close()
 
 
 if __name__ == '__main__':
-    main()
+    crawl_by_district(*prepare())

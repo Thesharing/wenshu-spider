@@ -258,9 +258,19 @@ class Spider:
                 if start_date is None or e > start_date:
                     info = self.tree_content(Parameter(param=str(config.date(s, e)), sess=self.sess))['裁判年份']
                     if info['IntValue'] < MAX_PAGE * 20 or period == quark:
-                        yield s, e
+                        yield s, e, info['IntValue']
                     else:
                         yield from split(s, period + 1)
+
+        def tail_5_days(s, e):
+            info = self.tree_content(Parameter(param=str(config.date(s, e)), sess=self.sess))['裁判年份']
+            if info['IntValue'] < MAX_PAGE * 20:
+                yield s, e, info['IntValue']
+            else:
+                cur = s
+                while cur < e:
+                    yield from split(cur, quark)
+                    cur = cur + timedelta(days=1)
 
         info = self.tree_content(Parameter(param=str(config), sess=self.sess))['裁判年份']
         if info['IntValue'] < MAX_PAGE * 20:
@@ -272,10 +282,12 @@ class Spider:
                 if start_date is None or e > start_date:
                     if year['IntValue'] > MAX_PAGE * 20:
                         yield from split(s, 0)
-                        yield s + timedelta(days=360), e
+                        yield from tail_5_days(s + timedelta(days=360), e)
                     else:
                         yield s, e
 
     def district(self, config: Config):
         info = self.tree_content(Parameter(param=str(config), sess=self.sess))['法院地域']
-        return list(item['Key'] for item in sorted(info['ParamList'], key=lambda item: item['IntValue'], reverse=False))
+        for dist in list(
+                item['Key'] for item in sorted(info['ParamList'], key=lambda item: item['IntValue'], reverse=False)):
+            yield dist
