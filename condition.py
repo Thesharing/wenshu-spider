@@ -2,7 +2,7 @@ from datetime import datetime
 from copy import deepcopy
 
 
-class Config:
+class Condition:
     def __init__(self):
         # 构造检索条件
 
@@ -39,7 +39,7 @@ class Config:
 
         self.param_list = param_list
 
-    def date(self, start_date: datetime, end_date: datetime) -> 'Config':
+    def date(self, start_date: datetime, end_date: datetime) -> 'Condition':
         """
         针对日期返回param字符串
         """
@@ -48,7 +48,7 @@ class Config:
             '裁判日期:{0} TO {1}'.format(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
         return c
 
-    def district(self, district: str) -> 'Config':
+    def district(self, district: str) -> 'Condition':
         c = deepcopy(self)
         c.param_list.append('法院地域:{0}'.format(district))
         return c

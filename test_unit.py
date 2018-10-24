@@ -1,6 +1,6 @@
 from parameter import Parameter
 from session import Session
-from config import Config
+from condition import Condition
 from spider import Spider
 from datetime import datetime
 import execjs
@@ -17,7 +17,7 @@ def test_vl5x(vjkl5):
 
 def test_spider():
     s = Session()
-    c = Config()
+    c = Condition()
     # parameter = Parameter(param=str(c), sess=s)
     spider = Spider(sess=s)
     # page: 每页几条; order: 排序标准; direction: 顺序 (asc - 正序 desc - 倒序)

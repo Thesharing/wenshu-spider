@@ -8,7 +8,7 @@ import logging
 
 from parameter import Parameter
 from session import Session
-from config import Config
+from condition import Condition
 from error import CheckCodeError
 
 MAX_PAGE = 10
@@ -242,7 +242,7 @@ class Spider:
             tree_dict[type_name] = type_dict
         return tree_dict
 
-    def time_interval(self, config: Config, start_date: datetime = None):
+    def time_interval(self, condition: Condition, start_date: datetime = None):
         """
         生成时间参数
         """
@@ -256,14 +256,14 @@ class Spider:
                 s = start + timedelta(days=i * period_length[period])
                 e = start + timedelta(days=(i + 1) * period_length[period])
                 if start_date is None or e > start_date:
-                    info = self.tree_content(Parameter(param=str(config.date(s, e)), sess=self.sess))['裁判年份']
+                    info = self.tree_content(Parameter(param=str(condition.date(s, e)), sess=self.sess))['裁判年份']
                     if info['IntValue'] < MAX_PAGE * 20 or period == quark:
                         yield s, e, info['IntValue']
                     else:
                         yield from split(s, period + 1)
 
         def tail_5_days(s, e):
-            info = self.tree_content(Parameter(param=str(config.date(s, e)), sess=self.sess))['裁判年份']
+            info = self.tree_content(Parameter(param=str(condition.date(s, e)), sess=self.sess))['裁判年份']
             if info['IntValue'] < MAX_PAGE * 20:
                 yield s, e, info['IntValue']
             else:
@@ -272,7 +272,7 @@ class Spider:
                     yield from split(cur, quark)
                     cur = cur + timedelta(days=1)
 
-        info = self.tree_content(Parameter(param=str(config), sess=self.sess))['裁判年份']
+        info = self.tree_content(Parameter(param=str(condition), sess=self.sess))['裁判年份']
         if info['IntValue'] < MAX_PAGE * 20:
             yield datetime(1990, 1, 1), datetime.now() + timedelta(days=1)
         else:
@@ -286,8 +286,8 @@ class Spider:
                     else:
                         yield s, e
 
-    def district(self, config: Config):
-        info = self.tree_content(Parameter(param=str(config), sess=self.sess))['法院地域']
+    def district(self, condition: Condition):
+        info = self.tree_content(Parameter(param=str(condition), sess=self.sess))['法院地域']
         for dist in list(
                 item['Key'] for item in sorted(info['ParamList'], key=lambda item: item['IntValue'], reverse=False)):
             yield dist

@@ -1,6 +1,6 @@
 from parameter import Parameter
 from session import Session
-from config import Config
+from condition import Condition
 from spider import Spider
 from error import ErrorList
 from util import CustomJsonDecoder
@@ -40,15 +40,15 @@ def prepare():
                 logging.error(
                     'Format of start.json is incorrect, which should be: {"district": "xx省", "date": "xxxx-xx-xx"}')
 
-    retry_time = 10
+    max_retry = 10
     data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
 
-    return start_dist, start_date, retry_time, data_file
+    return start_dist, start_date, max_retry, data_file
 
 
-def crawl_by_district(start_dist, start_date, retry_time, data_file):
+def crawl_by_district(start_dist, start_date, max_retry, data_file):
     s = Session()
-    c = Config()
+    c = Condition()
     spider = Spider(sess=s)
 
     total_success = False
@@ -61,9 +61,10 @@ def crawl_by_district(start_dist, start_date, retry_time, data_file):
 
             # log the distribution of district
             with open('district_list.txt', 'w', encoding='utf-8') as f:
-                print(json.dumps(list(spider.district(config=c)), ensure_ascii=False), file=f)
+                print(json.dumps(list(spider.district(condition=c)), ensure_ascii=False), file=f)
 
-            for dist in spider.district(config=c):
+            for dist in spider.district(condition=c):
+                # Find the district to start
                 if not start:
                     if dist == start_dist:
                         start = True
@@ -71,26 +72,32 @@ def crawl_by_district(start_dist, start_date, retry_time, data_file):
                         continue
                 logging.info(dist)
                 c1 = c.district(dist)
-                dist_success = False
-                first_retry_time = retry_time
-                cur_date = None  # if time_interval is interrupted, continue from the start_date
+
+                # If time_interval is interrupted, continue from the start_date
+                cur_date = None
                 if start_date is not None:
                     cur_date = start_date
                     start_date = None
+
+                # Variables for retry
+                dist_success = False
+                dist_retry = max_retry
                 while not dist_success:
                     try:
-                        for d in spider.time_interval(config=c1, start_date=cur_date):
-                            logging.info(
-                                '{0} {1} {2} {3}'.format(dist, d[0].strftime('%Y-%m-%d'), d[1].strftime('%Y-%m-%d'),
-                                                         d[2]))
-                            cur_date = d[0]
+                        for time_interval in spider.time_interval(condition=c1, start_date=cur_date):
+                            logging.info('{0} {1} {2} {3}'.format(dist,
+                                                                  time_interval[0].strftime('%Y-%m-%d'),
+                                                                  time_interval[1].strftime('%Y-%m-%d'),
+                                                                  time_interval[2]))
+                            cur_date = time_interval[0]
                             time_success = False
-                            second_retry_time = retry_time
+                            time_retry = max_retry
                             index = 1
                             while not time_success:
                                 try:
                                     for item, idx in spider.content_list(
-                                            param=Parameter(param=str(c1.date(d[0], d[1])), sess=s),
+                                            param=Parameter(param=str(c1.date(time_interval[0], time_interval[1])),
+                                                            sess=s),
                                             page=20, order='法院层级', direction='asc', index=index):
                                         print(item, file=data_file)
                                         index = idx
@@ -102,17 +109,17 @@ def crawl_by_district(start_dist, start_date, retry_time, data_file):
                                     time_success = True
                                 except ErrorList as e:
                                     logging.error('Error when fetch content list: {0}'.format(str(e)))
-                                    second_retry_time -= 1
-                                    if second_retry_time <= 0:
+                                    time_retry -= 1
+                                    if time_retry <= 0:
                                         s.switch_proxy()
-                                        second_retry_time = retry_time
+                                        time_retry = max_retry
                         dist_success = True
                     except ErrorList as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
-                        first_retry_time -= 1
-                        if first_retry_time <= 0:
+                        dist_retry -= 1
+                        if dist_retry <= 0:
                             s.switch_proxy()
-                            first_retry_time = retry_time
+                            dist_retry = max_retry
             total_success = True
         except ErrorList as e:
             logging.error('Error when fetch dist information: {0}'.format(str(e)))
