@@ -1,10 +1,14 @@
+.idea
+__pycache__
+.pytest_cache
+
 log
 temp
 content
 download
 data
+
 start.json
+start_example.json
 district_list.txt
-.idea
-__pycache__
-.pytest_cache
+config.json

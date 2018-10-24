@@ -48,7 +48,10 @@ def test_util():
     print(t)
 
 
+def test_config():
+    from config import Config
+    print(Config)
+
+
 if __name__ == '__main__':
-    d = CustomJsonDecoder()
-    print(d.decode('{"district": "陕西省", "date": "2018-01-10"}'))
-    # test_util()
+    test_config()

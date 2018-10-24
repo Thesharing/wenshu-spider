@@ -3,6 +3,7 @@ import random
 import time
 import logging
 from error import NetworkException
+from config import Config
 
 user_agent_list = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.81 Safari/537.36',
@@ -17,7 +18,7 @@ user_agent_list = [
     'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko'
 ]
 
-PROXY = False
+PROXY = Config['config']['proxy']
 
 
 class Session:
@@ -26,7 +27,7 @@ class Session:
         self.session = requests.Session()
         if PROXY:
             self.proxy = self._get_proxy()
-        self.TIMEOUT = 60
+        self.TIMEOUT = Config['config']['timeout']
 
     @property
     def user_agent(self):

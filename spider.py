@@ -274,7 +274,7 @@ class Spider:
 
         info = self.tree_content(Parameter(param=str(condition), sess=self.sess))['裁判年份']
         if info['IntValue'] < MAX_PAGE * 20:
-            yield datetime(1990, 1, 1), datetime.now() + timedelta(days=1)
+            yield datetime(1990, 1, 1), datetime.today() + timedelta(days=1), info['IntValue']
         else:
             for year in sorted(info['ParamList'], key=lambda item: int(item['Key']), reverse=False):
                 s = datetime(int(year['Key']), 1, 1)
@@ -284,7 +284,7 @@ class Spider:
                         yield from split(s, 0)
                         yield from tail_5_days(s + timedelta(days=360), e)
                     else:
-                        yield s, e
+                        yield s, e, year['IntValue']
 
     def district(self, condition: Condition):
         info = self.tree_content(Parameter(param=str(condition), sess=self.sess))['法院地域']

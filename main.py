@@ -3,9 +3,8 @@ from session import Session
 from condition import Condition
 from spider import Spider
 from error import ErrorList
-from util import CustomJsonDecoder
+from config import Config
 from datetime import datetime
-import os
 import logging
 import sys
 import json
@@ -25,22 +24,15 @@ def prepare():
                             logging.StreamHandler()])
 
     start_dist, start_date = None, None
-    if os.path.isfile('start.json'):
-        with open('start.json', 'r', encoding='utf-8') as f:
-            try:
-                decoder = CustomJsonDecoder()
-                start_info = decoder.decode(f.read().strip())
-                if 'district' in start_info and start_info['district'] is not None:
-                    start_dist = start_info['district']
-                    logging.info('Start District: {}'.format(start_dist))
-                if 'date' in start_info and start_info['date'] is not None:
-                    start_date = start_info['date']
-                    logging.info('Start Date: {}'.format(start_date.strftime("%Y-%m-%d")))
-            except (json.decoder.JSONDecodeError, KeyError, ValueError):
-                logging.error(
-                    'Format of start.json is incorrect, which should be: {"district": "xx省", "date": "xxxx-xx-xx"}')
+    start_info = Config['start']
+    if 'district' in start_info and start_info['district'] is not None:
+        start_dist = start_info['district']
+        logging.info('Start District: {}'.format(start_dist))
+    if 'date' in start_info and start_info['date'] is not None:
+        start_date = start_info['date']
+        logging.info('Start Date: {}'.format(start_date.strftime("%Y-%m-%d")))
 
-    max_retry = 10
+    max_retry = Config['config']['maxRetry']
     data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
 
     return start_dist, start_date, max_retry, data_file
@@ -114,7 +106,7 @@ def crawl_by_district(start_dist, start_date, max_retry, data_file):
                                         s.switch_proxy()
                                         time_retry = max_retry
                         dist_success = True
-                    except ErrorList as e:
+                    except None as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
                         dist_retry -= 1
                         if dist_retry <= 0:
