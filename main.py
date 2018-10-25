@@ -8,6 +8,7 @@ from datetime import datetime
 import logging
 import sys
 import json
+import argparse
 
 
 def prepare():
@@ -23,6 +24,10 @@ def prepare():
                                 encoding='utf-8', mode='a'),
                             logging.StreamHandler()])
 
+
+def crawl_by_district():
+
+    # Read config
     start_dist, start_date = None, None
     start_info = Config['start']
     if 'district' in start_info and start_info['district'] is not None:
@@ -35,10 +40,6 @@ def prepare():
     max_retry = Config['config']['maxRetry']
     data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
 
-    return start_dist, start_date, max_retry, data_file
-
-
-def crawl_by_district(start_dist, start_date, max_retry, data_file):
     s = Session()
     c = Condition()
     spider = Spider(sess=s)
@@ -106,7 +107,7 @@ def crawl_by_district(start_dist, start_date, max_retry, data_file):
                                         s.switch_proxy()
                                         time_retry = max_retry
                         dist_success = True
-                    except None as e:
+                    except ErrorList as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
                         dist_retry -= 1
                         if dist_retry <= 0:
@@ -120,4 +121,7 @@ def crawl_by_district(start_dist, start_date, max_retry, data_file):
 
 
 if __name__ == '__main__':
-    crawl_by_district(*prepare())
+    # parser = argparse.ArgumentParser(description='Spider of court-spider')
+    # parser.add_argument('--spider')
+    prepare()
+    crawl_by_district()
