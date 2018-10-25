@@ -143,5 +143,9 @@ def crawl_by_district():
     data_file.close()
 
 
+# TODO: Provide courts split
+# TODO: Crawl by date
+# TODO: Downloader
+
 if __name__ == '__main__':
     main()

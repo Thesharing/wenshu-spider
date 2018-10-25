@@ -9,7 +9,7 @@ import logging
 from parameter import Parameter
 from session import Session
 from condition import Condition
-from error import CheckCodeError
+from error import CheckCodeError, NullContentError
 
 MAX_PAGE = 10
 
@@ -221,11 +221,12 @@ class Spider:
         while True:
             r = self.sess.post(url=url, headers=headers, data=data)
             t = r.text.replace('\\', '').replace('"[', '[').replace(']"', ']')
-            if t == '"remind"' or t == '"remind key"':
-                logging.warning('出现验证码', end='\r')
-                raise CheckCodeError('CheckCode Appeared in tree_content')
+            if len(t) <= 0:
+                raise NullContentError('Receive null content in tree_content.')
+            elif t == '"remind"' or t == '"remind key"':
+                # logging.warning('出现验证码', end='\r')
+                raise CheckCodeError('CheckCode Appeared in tree_content.')
                 # CheckCode(sess=self.sess)
-
             else:
                 break
         json_data = json.loads(t)
