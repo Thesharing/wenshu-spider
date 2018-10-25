@@ -11,7 +11,7 @@ import json
 import argparse
 
 
-def prepare():
+def main():
     if sys.version_info.major < 3 or sys.version_info.minor < 5:
         print('Python >= 3.5 is required, you are using {}.{}.'.format(sys.version_info.major, sys.version_info.minor))
         exit(1)
@@ -24,9 +24,32 @@ def prepare():
                                 encoding='utf-8', mode='a'),
                             logging.StreamHandler()])
 
+    parser = argparse.ArgumentParser(description='Court Spider')
+    parser.add_argument('-s', '--spider', nargs='?', choices=['date', 'district'], const='date',
+                        help='Start a spider to crawl data by date or by district')
+    parser.add_argument('-d', '--downloader', action='store_true', help='Start a downloader')
+    args = parser.parse_args()
+
+    if args.spider is None:
+        if args.downloader is False:
+            logging.error('Please specify spider or downloader to run.')
+            parser.print_help()
+            exit(1)
+        else:
+            logging.info('Downloader running.')
+    if args.spider is not None:
+        if args.downloader is True:
+            logging.error('Choose one from spider or downloader, not both.')
+            parser.print_help()
+            exit(1)
+        elif args.spider == 'date':
+            logging.info('Spider running to crawl data by date.')
+            crawl_by_district()
+        elif args.spider == 'district':
+            logging.info('Spider running to crawl data by district.')
+
 
 def crawl_by_district():
-
     # Read config
     start_dist, start_date = None, None
     start_info = Config['start']
@@ -107,7 +130,7 @@ def crawl_by_district():
                                         s.switch_proxy()
                                         time_retry = max_retry
                         dist_success = True
-                    except ErrorList as e:
+                    except None as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
                         dist_retry -= 1
                         if dist_retry <= 0:
@@ -121,7 +144,4 @@ def crawl_by_district():
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser(description='Spider of court-spider')
-    # parser.add_argument('--spider')
-    prepare()
-    crawl_by_district()
+    main()
