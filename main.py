@@ -130,7 +130,7 @@ def crawl_by_district():
                                         s.switch_proxy()
                                         time_retry = max_retry
                         dist_success = True
-                    except None as e:
+                    except ErrorList as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
                         dist_retry -= 1
                         if dist_retry <= 0:

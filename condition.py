@@ -7,9 +7,9 @@ class Condition:
     def __init__(self):
         # 构造检索条件
 
-        keyword = Config['search']['keyword']
-        search_type = Config['search']['type']
-        params = Config['condition']
+        self.keyword = Config['search']['keyword']
+        self.search_type = Config['search']['type']
+        self.params = Config['condition']
 
         # # 检索关键词
         # keyword = '*'  # 空关键字 ==> '*'
@@ -28,9 +28,9 @@ class Condition:
 
         # 构造参数列表
         param_list = list()
-        if search_type is not None:
-            param_list.append("{0}:{1}".format(search_type, keyword))
-        for name, value in params.items():
+        if self.search_type is not None:
+            param_list.append("{0}:{1}".format(self.search_type, self.keyword))
+        for name, value in self.params.items():
             if value is not None:
                 param_list.append("{0}:{1}".format(name, value))
 
@@ -44,6 +44,9 @@ class Condition:
 
         self.param_list = param_list
 
+        self.start_date = None
+        self.end_date = None
+
     def date(self, start_date: datetime, end_date: datetime) -> 'Condition':
         """
         针对日期返回param字符串
@@ -51,11 +54,14 @@ class Condition:
         c = deepcopy(self)
         c.param_list.append(
             '裁判日期:{0} TO {1}'.format(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
+        c.start_date = start_date
+        c.end_date = end_date
         return c
 
     def district(self, district: str) -> 'Condition':
         c = deepcopy(self)
         c.param_list.append('法院地域:{0}'.format(district))
+
         return c
 
     def __str__(self):

@@ -243,6 +243,63 @@ class Spider:
             tree_dict[type_name] = type_dict
         return tree_dict
 
+    def court_tree_content(self, condition: Condition, parval: str, start_court: str = None):
+        """
+        获取每个省市的法院列表
+        :return: A list of court names
+        """
+        url = 'http://wenshu.court.gov.cn/List/CourtTreeContent'
+        headers = {
+            "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "Host": "wenshu.court.gov.cn",
+            "Origin": "http://wenshu.court.gov.cn",
+            "Proxy-Connection": "keep-alive",
+            "Referer": "http://wenshu.court.gov.cn/list/list/?sorttype=1&&conditions=searchWord+2+AJLX++{0}".format(
+                parse.quote(str(condition))),
+            "User-Agent": self.sess.user_agent,
+            "X-Requested-With": "XMLHttpRequest"
+        }
+        data = {
+            "Param": str(condition),
+            "parval": parval
+        }
+        while True:
+            r = self.sess.post(url=url, headers=headers, data=data)
+            t = r.text.replace('\\', '').replace('"[', '[').replace(']"', ']')
+            if len(t) <= 0:
+                raise NullContentError('Receive null content in tree_content.')
+            elif t == '"remind"' or t == '"remind key"':
+                # logging.warning('出现验证码', end='\r')
+                raise CheckCodeError('CheckCode Appeared in tree_content.')
+                # CheckCode(sess=self.sess)
+            else:
+                break
+        json_data = json.loads(t)
+        tree_dict = {}
+        for type_data in json_data:
+            type_name = type_data['Key']
+            type_dict = {
+                'IntValue': type_data['IntValue'],
+                'ParamList': []
+            }
+            for data in type_data['Child']:
+                if data['IntValue']:
+                    type_dict['ParamList'].append({'Key': data['Key'], 'IntValue': data['IntValue']})
+            tree_dict[type_name] = type_dict
+        return tree_dict
+
+    def reason_tree_content(self, condition: Condition, start_reason: str = None):
+        """
+        获取父案由下所有的子案由
+        :param condition:
+        :param start_reason:
+        :return: A list of reasons and corresponding level
+        """
+        return None
+
     def time_interval(self, condition: Condition, start_date: datetime = None):
         """
         生成时间参数
@@ -287,8 +344,20 @@ class Spider:
                     else:
                         yield s, e, year['IntValue']
 
-    def district(self, condition: Condition):
+    def district(self, condition: Condition, start_dist: str = None):
         info = self.tree_content(Parameter(param=str(condition), sess=self.sess))['法院地域']
-        for dist in list(
-                item['Key'] for item in sorted(info['ParamList'], key=lambda item: item['IntValue'], reverse=False)):
-            yield dist
+        if start_dist is None:
+            start = True
+        else:
+            start = False
+        for item in sorted(info['ParamList'], key=lambda item: item['IntValue'], reverse=False):
+            dist = item['Key']
+            if not start:
+                if dist == start_dist:
+                    start = True
+                    yield dist
+            else:
+                yield dist
+
+    def court(self, condition: Condition):
+        pass
