@@ -1,7 +1,8 @@
 {
   "start": {
     "date": "2017-05-11",
-    "district": "北京市"
+    "district": "北京市",
+    "court": null
   },
   "search": {
     "keyword": "*",
@@ -12,7 +13,8 @@
     },
     "court": {
       "value": null,
-      "level": 0
+      "level": 0,
+      "indicator": false
     },
     "district": null
   },

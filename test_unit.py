@@ -57,5 +57,20 @@ def test_condition():
     print(Condition().params)
 
 
+def test_court():
+    from session import Session
+    from condition import Condition
+    from spider import Spider
+    from parameter import Parameter
+    from datetime import datetime
+    s = Session()
+    c = Condition().district('北京市')
+    spider = Spider(sess=s)
+    # print(spider.tree_content(param=Parameter(param=str(c), sess=s)))
+    # print(spider.court_tree_content(condition=c, parval='北京市'))
+    for i in spider.court(condition=c.date(start_date=datetime(2017, 5, 15), end_date=datetime(2017, 5, 16)), district='广东省'):
+        print(c.court(*i[0:3]), i[3])
+
+
 if __name__ == '__main__':
-    test_config()
+    test_court()

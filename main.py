@@ -59,6 +59,9 @@ def crawl_by_district():
     if hasattr(start_info, 'date') and start_info.date is not None:
         start_date = start_info.date
         logging.info('Start Date: {}'.format(start_date.strftime("%Y-%m-%d")))
+    if hasattr(start_info, 'court') and start_info.court is not None:
+        start_court = start_info.court
+        logging.info('Start Court: {}'.format(start_court))
 
     max_retry = Config.config.max_retry
     data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
@@ -109,10 +112,14 @@ def crawl_by_district():
                             time_success = False
                             time_retry = max_retry
                             index = 1
+                            c2 = c1.date(time_interval[0], time_interval[1])
                             while not time_success:
+                                if time_interval[2] > 200:
+
+                                    for court in spider.court(condition=c2, district=dist, start_court=)
                                 try:
                                     for item, idx in spider.content_list(
-                                            param=Parameter(param=str(c1.date(time_interval[0], time_interval[1])),
+                                            param=Parameter(param=str(),
                                                             sess=s),
                                             page=20, order='法院层级', direction='asc', index=index):
                                         print(item, file=data_file)
@@ -146,7 +153,7 @@ def crawl_by_district():
 # TODO: Provide courts split
 # TODO: Crawl by date
 # TODO: Downloader
-# TODO: MultiTread Support
+# TODO: MultiTread Support --> Task Distributor, Content List Downloader, Document Downloader
 
 if __name__ == '__main__':
     main()

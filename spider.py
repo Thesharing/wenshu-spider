@@ -385,8 +385,8 @@ class Spider:
             start = True
         else:
             start = False
-        for item in sorted(info['ParamList'], key=lambda item: item['IntValue'], reverse=False):
-            dist = item['Key']
+        for d in sorted(info['ParamList'], key=lambda item: item['IntValue'], reverse=False):
+            dist = d['Key']
             if not start:
                 if dist == start_dist:
                     start = True
@@ -394,5 +394,47 @@ class Spider:
             else:
                 yield dist
 
-    def court(self, condition: Condition):
-        pass
+    def court(self, condition: Condition, district: str, start_court: str = None):
+        """
+        :param condition:
+        :param district:
+        :param start_court: start_court will only be available for level 2
+        :return: Court name, court level, court indicator, count
+        """
+        level_count = {'高级法院': 0, '中级法院': 0, '基层法院': 0}
+        condition = condition.district(district)
+        info = self.tree_content(Parameter(param=str(condition), sess=self.sess))['法院层级']
+        satisfy = True
+        for item in info['ParamList']:
+            if item['IntValue'] > 200:
+                satisfy = False
+            if item['Key'] in level_count:
+                level_count[item['Key']] = item['IntValue']
+
+        if satisfy:
+            for k, v in level_count.items():
+                if v > 0:
+                    yield None, k, True, v
+
+        else:
+            start = start_court is None
+
+            if start and level_count['高级法院'] > 0:
+                yield None, 1, True, level_count['高级法院']
+            middle = self.court_tree_content(condition, parval=district)['中级法院']
+            for d in sorted(middle['ParamList'], key=lambda item: item['IntValue'], reverse=False):
+                mid_court = d['Key']
+                if not start:
+                    if mid_court == start_court:
+                        start = True
+                if start:
+                    if 0 < d['IntValue'] < 200:
+                        yield mid_court, 2, False, d['IntValue']
+                    else:
+                        base = self.court_tree_content(condition.court(mid_court, 2, False), parval=mid_court)['基层法院']
+                        if d['IntValue'] - base['IntValue'] > 0:
+                            yield mid_court, 2, True, d['IntValue'] - base['IntValue']
+                        for g in sorted(base['ParamList'], key=lambda item: item['IntValue'], reverse=False):
+                            base_court = g['Key']
+                            if g['IntValue'] > 0:
+                                yield base_court, 3, False, g['IntValue']

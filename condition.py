@@ -16,6 +16,7 @@ class Condition:
 
         self.court_value = Config.search.court.value
         self.court_level = Config.search.court.level
+        self.court_indicator = Config.search.court.indicator
         self.court_list = ['', '高级法院', '中级法院', '基层法院']
 
         self.district_value = Config.search.district
@@ -45,10 +46,12 @@ class Condition:
         param_list = list()
         if self.search_type is not None:
             param_list.append("{0}:{1}".format(self.search_type, self.keyword))
-        if self.reason_value is not None and self.reason_level != 0:
+        if self.reason_value is not None and self.reason_level > 0:
             param_list.append("{0}:{1}".format(self.reason_list[self.reason_level], self.reason_value))
-        if self.court_value is not None and self.court_level != 0:
+        if self.court_value is not None and self.court_level > 1:
             param_list.append("{0}:{1}".format(self.court_list[self.court_level], self.court_value))
+        if self.court_indicator:
+            param_list.append("法院层级:{0}".format(self.court_list[self.court_level]))
         if self.district_value is not None:
             param_list.append("法院地域:{0}".format(self.district_value))
         if self.start_date is not None and self.end_date is not None:
@@ -72,6 +75,13 @@ class Condition:
     def district(self, district: str) -> 'Condition':
         c = deepcopy(self)
         c.district_value = district
+        return c
+
+    def court(self, court_value: str, court_level: int, court_indicator: bool) -> 'Condition':
+        c = deepcopy(self)
+        c.court_level = court_level
+        c.court_value = court_value
+        c.court_indicator = court_indicator
         return c
 
     def __str__(self):

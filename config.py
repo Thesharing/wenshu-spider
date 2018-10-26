@@ -25,7 +25,8 @@ class Nested:
 Config = Nested({
     'start': {
         'date': None,
-        'district': None
+        'district': None,
+        'court': None
     },
     'search': {
         'keyword': '*',
@@ -36,7 +37,8 @@ Config = Nested({
         },
         'court:': {
             'value': None,
-            'level': 0
+            'level': 0,
+            'indicator': False
         },
         'district': None
     },
