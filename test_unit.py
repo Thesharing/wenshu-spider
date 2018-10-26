@@ -1,14 +1,5 @@
-from parameter import Parameter
-from session import Session
-from condition import Condition
-from spider import Spider
-from datetime import datetime
-import execjs
-import logging
-from util import CustomJsonEncoder, CustomJsonDecoder
-
-
 def test_vl5x(vjkl5):
+    import execjs
     with open('./js/vl5x.js') as f:
         js = f.read()
         js_vl5x = execjs.compile(js)
@@ -16,6 +7,12 @@ def test_vl5x(vjkl5):
 
 
 def test_spider():
+    from session import Session
+    from condition import Condition
+    from spider import Spider
+    from parameter import Parameter
+    from datetime import datetime
+
     s = Session()
     c = Condition()
     # parameter = Parameter(param=str(c), sess=s)
@@ -26,16 +23,18 @@ def test_spider():
                         sess=s)))
     for i in spider.content_list(param=Parameter(param=
                                                  str(c.district('西藏自治区').date(datetime(1991, 1, 1),
-                                                                              datetime(2018, 9, 15)))),
+                                                                              datetime(2018, 9, 15))), sess=s),
                                  page=20, order='法院层级', direction='asc'):
         print(i)
 
 
 def test_logging():
+    import logging
     logging.info('Test')
 
 
 def test_util():
+    from util import CustomJsonEncoder, CustomJsonDecoder
     e = CustomJsonEncoder()
     d = CustomJsonDecoder()
     t = {
@@ -50,7 +49,12 @@ def test_util():
 
 def test_config():
     from config import Config
-    print(Config)
+    print(Config.config.maxRetry)
+
+
+def test_condition():
+    from condition import Condition
+    print(Condition().params)
 
 
 if __name__ == '__main__':

@@ -52,15 +52,15 @@ def main():
 def crawl_by_district():
     # Read config
     start_dist, start_date = None, None
-    start_info = Config['start']
-    if 'district' in start_info and start_info['district'] is not None:
-        start_dist = start_info['district']
+    start_info = Config.start
+    if hasattr(start_info, 'district') and start_info.district is not None:
+        start_dist = start_info.district
         logging.info('Start District: {}'.format(start_dist))
-    if 'date' in start_info and start_info['date'] is not None:
-        start_date = start_info['date']
+    if hasattr(start_info, 'date') and start_info.date is not None:
+        start_date = start_info.date
         logging.info('Start Date: {}'.format(start_date.strftime("%Y-%m-%d")))
 
-    max_retry = Config['config']['maxRetry']
+    max_retry = Config.config.max_retry
     data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
 
     s = Session()
@@ -146,6 +146,7 @@ def crawl_by_district():
 # TODO: Provide courts split
 # TODO: Crawl by date
 # TODO: Downloader
+# TODO: MultiTread Support
 
 if __name__ == '__main__':
     main()

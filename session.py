@@ -18,7 +18,7 @@ user_agent_list = [
     'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko'
 ]
 
-PROXY = Config['config']['proxy']
+PROXY = Config.config.proxy
 
 
 class Session:
@@ -27,7 +27,7 @@ class Session:
         self.session = requests.Session()
         if PROXY:
             self.proxy = self._get_proxy()
-        self.TIMEOUT = Config['config']['timeout']
+        self.TIMEOUT = Config.config.timeout
 
     @property
     def user_agent(self):

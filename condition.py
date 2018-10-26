@@ -7,9 +7,22 @@ class Condition:
     def __init__(self):
         # 构造检索条件
 
-        self.keyword = Config['search']['keyword']
-        self.search_type = Config['search']['type']
-        self.params = Config['condition']
+        self.keyword = Config.search.keyword
+        self.search_type = Config.search.type
+
+        self.reason_value = Config.search.reason.value
+        self.reason_level = Config.search.reason.level
+        self.reason_list = ['', '案由', '二级案由', '三级案由', '四级案由', '五级案由']
+
+        self.court_value = Config.search.court.value
+        self.court_level = Config.search.court.level
+        self.court_list = ['', '高级法院', '中级法院', '基层法院']
+
+        self.district_value = Config.search.district
+        self.params = Config.condition.dict
+
+        self.start_date = None
+        self.end_date = None
 
         # # 检索关键词
         # keyword = '*'  # 空关键字 ==> '*'
@@ -26,42 +39,39 @@ class Condition:
         # params['法院地域'] = None  # 法院地域需要二次获取，判断哪些省份的法院有数据
         # params['二级案由'] = '知识产权与竞争纠纷'
 
+    @property
+    def param_list(self):
         # 构造参数列表
         param_list = list()
         if self.search_type is not None:
             param_list.append("{0}:{1}".format(self.search_type, self.keyword))
+        if self.reason_value is not None and self.reason_level != 0:
+            param_list.append("{0}:{1}".format(self.reason_list[self.reason_level], self.reason_value))
+        if self.court_value is not None and self.court_level != 0:
+            param_list.append("{0}:{1}".format(self.court_list[self.court_level], self.court_value))
+        if self.district_value is not None:
+            param_list.append("法院地域:{0}".format(self.district_value))
+        if self.start_date is not None and self.end_date is not None:
+            param_list.append(
+                '裁判日期:{0} TO {1}'.format(self.start_date.strftime('%Y-%m-%d'), self.end_date.strftime('%Y-%m-%d')))
         for name, value in self.params.items():
             if value is not None:
                 param_list.append("{0}:{1}".format(name, value))
 
-        # 裁判日期
-        # start_date = '2007-01-11'
-        # end_date = '2008-12-31'
-        # param_list.append("裁判日期:{0} TO {1}".format(start_date, end_date))
-
-        # 裁判年份
-        # param_list.append('裁判年份:{0}'.format('2017'))
-
-        self.param_list = param_list
-
-        self.start_date = None
-        self.end_date = None
+        return param_list
 
     def date(self, start_date: datetime, end_date: datetime) -> 'Condition':
         """
         针对日期返回param字符串
         """
         c = deepcopy(self)
-        c.param_list.append(
-            '裁判日期:{0} TO {1}'.format(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
         c.start_date = start_date
         c.end_date = end_date
         return c
 
     def district(self, district: str) -> 'Condition':
         c = deepcopy(self)
-        c.param_list.append('法院地域:{0}'.format(district))
-
+        c.district_value = district
         return c
 
     def __str__(self):
