@@ -51,7 +51,7 @@ def main():
 
 def crawl_by_district():
     # Read config
-    start_dist, start_date = None, None
+    start_dist, start_date, start_court = None, None, None
     start_info = Config.start
     if hasattr(start_info, 'district') and start_info.district is not None:
         start_dist = start_info.district
@@ -93,10 +93,8 @@ def crawl_by_district():
                 c1 = c.district(dist)
 
                 # If time_interval is interrupted, continue from the start_date
-                cur_date = None
-                if start_date is not None:
-                    cur_date = start_date
-                    start_date = None
+                cur_date = start_date
+                start_date = None
 
                 # Variables for retry
                 dist_success = False
@@ -113,29 +111,69 @@ def crawl_by_district():
                             time_retry = max_retry
                             index = 1
                             c2 = c1.date(time_interval[0], time_interval[1])
+
+                            cur_court = start_court
+                            start_court = None
+
                             while not time_success:
                                 if time_interval[2] > 200:
-
-                                    for court in spider.court(condition=c2, district=dist, start_court=)
-                                try:
-                                    for item, idx in spider.content_list(
-                                            param=Parameter(param=str(),
-                                                            sess=s),
-                                            page=20, order='法院层级', direction='asc', index=index):
-                                        print(item, file=data_file)
-                                        index = idx
-                                        # print(item['id'], item['name'])
-                                        # try:
-                                        #     spider.download_doc(item['id'])
-                                        # except:
-                                        #     print(item['id'], file=error_log)
-                                    time_success = True
-                                except ErrorList as e:
-                                    logging.error('Error when fetch content list: {0}'.format(str(e)))
-                                    time_retry -= 1
-                                    if time_retry <= 0:
-                                        s.switch_proxy()
-                                        time_retry = max_retry
+                                    try:
+                                        for court in spider.court(condition=c2, district=dist, start_court=cur_court):
+                                            logging.info('{0} {1} {2} {3} {4} {5} {6}'.format(dist,
+                                                                                              time_interval[0].strftime(
+                                                                                                  '%Y-%m-%d'),
+                                                                                              time_interval[1].strftime(
+                                                                                                  '%Y-%m-%d'),
+                                                                                              court[0], court[1], court[2],
+                                                                                              court[3]))
+                                            if court[1] == 2:
+                                                cur_court = court[0]
+                                            court_success = False
+                                            court_retry = max_retry
+                                            index = 1
+                                            c3 = c2.court(*court[0:3])
+                                            while not court_success:
+                                                try:
+                                                    for item, idx in spider.content_list(
+                                                            param=Parameter(param=str(c3),
+                                                                            sess=s),
+                                                            page=20, order='法院层级', direction='asc', index=index):
+                                                        print(item, file=data_file)
+                                                        index = idx
+                                                    court_success = True
+                                                except ErrorList as e:
+                                                    logging.error('Error when fetch content list: {0}'.format(str(e)))
+                                                    court_retry -= 1
+                                                    if court_retry <= 0:
+                                                        s.switch_proxy()
+                                                        court_retry = max_retry
+                                        time_success = True
+                                    except ErrorList as e:
+                                        logging.error('Error when fetch court: {0}'.format(str(e)))
+                                        time_retry -= 1
+                                        if time_retry <= 0:
+                                            s.switch_proxy()
+                                            time_retry = max_retry
+                                else:
+                                    try:
+                                        for item, idx in spider.content_list(
+                                                param=Parameter(param=str(c2),
+                                                                sess=s),
+                                                page=20, order='法院层级', direction='asc', index=index):
+                                            print(item, file=data_file)
+                                            index = idx
+                                            # print(item['id'], item['name'])
+                                            # try:
+                                            #     spider.download_doc(item['id'])
+                                            # except:
+                                            #     print(item['id'], file=error_log)
+                                        time_success = True
+                                    except ErrorList as e:
+                                        logging.error('Error when fetch content list: {0}'.format(str(e)))
+                                        time_retry -= 1
+                                        if time_retry <= 0:
+                                            s.switch_proxy()
+                                            time_retry = max_retry
                         dist_success = True
                     except ErrorList as e:
                         logging.error('Error when fetch time interval: {0}'.format(str(e)))
@@ -150,7 +188,6 @@ def crawl_by_district():
     data_file.close()
 
 
-# TODO: Provide courts split
 # TODO: Crawl by date
 # TODO: Downloader
 # TODO: MultiTread Support --> Task Distributor, Content List Downloader, Document Downloader

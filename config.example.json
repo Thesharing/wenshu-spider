@@ -26,7 +26,7 @@
   },
   "config": {
     "max_retry": 10,
-    "proxy": false,
+    "proxy": true,
     "timeout": 60
   }
 }
