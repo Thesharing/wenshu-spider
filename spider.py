@@ -18,6 +18,8 @@ class Spider:
 
     def __init__(self, sess: Session):
 
+        self.logger = logging.getLogger('spider')
+
         self.sess = sess
 
         with open('./js/docid.js') as f:
@@ -39,7 +41,7 @@ class Spider:
 
         while True:
 
-            logging.info('第 {0} 页'.format(index))
+            self.logger.info('第 {0} 页'.format(index))
 
             # 获取数据
             url = "http://wenshu.court.gov.cn/List/ListContent"
@@ -82,17 +84,17 @@ class Spider:
                     json_data = json.loads(return_data)
                     json_error_retry_time = 5
                 except Exception as e:
-                    logging.error('JSON Error: {}.'.format(str(e)))
+                    self.logger.error('JSON Error: {}.'.format(str(e)))
                     # If there are 5 JSON errors, skip this page
                     json_error_retry_time -= 1
                     if json_error_retry_time == 0:
-                        logging.critical('Skip the page {} for so many json errors.'.format(index))
+                        self.logger.critical('Skip the page {} for so many json errors.'.format(index))
                         index += 1
                         if index > MAX_PAGE or (total != 0 and count >= total):
                             break
                     continue
                 if not len(json_data):
-                    logging.info('完成')
+                    self.logger.info('Finished.')
                     break
                 else:
                     run_eval = json_data[0]['RunEval']
@@ -188,11 +190,11 @@ class Spider:
         r = self.sess.post(url=url, headers=headers, data=data)
         filename = './download/{}.doc'.format(doc_id)
         if os.path.exists(filename):
-            logging.warning('{} 重复'.format(name))
+            self.logger.warning('{} duplicated.'.format(name))
         else:
             with open(filename, 'wb') as f:
                 f.write(r.content)
-            logging.info('{} 已下载'.format(name))
+            self.logger.info('{} downloaded.'.format(name))
 
     def tree_content(self, param: Parameter):
         """
@@ -224,7 +226,7 @@ class Spider:
             if len(t) <= 0:
                 raise NullContentError('Receive null content in tree_content.')
             elif t == '"remind"' or t == '"remind key"':
-                # logging.warning('出现验证码', end='\r')
+                # self.logger.warning('出现验证码', end='\r')
                 raise CheckCodeError('CheckCode Appeared in tree_content.')
                 # CheckCode(sess=self.sess)
             else:

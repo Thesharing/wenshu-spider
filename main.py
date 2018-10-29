@@ -5,6 +5,7 @@ from spider import Spider
 from error import ErrorList
 from config import Config
 from datetime import datetime
+from log import Log
 import logging
 import sys
 import json
@@ -16,13 +17,9 @@ def main():
         print('Python >= 3.5 is required, you are using {}.{}.'.format(sys.version_info.major, sys.version_info.minor))
         exit(1)
 
-    logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
-                        level=logging.INFO,
-                        handlers=[
-                            logging.FileHandler(
-                                './log/log {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')),
-                                encoding='utf-8', mode='a'),
-                            logging.StreamHandler()])
+    # TODO: Specify the process and
+
+    logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
     parser = argparse.ArgumentParser(description='Court Spider')
     parser.add_argument('-s', '--spider', nargs='?', choices=['date', 'district'], const='date',
@@ -36,32 +33,36 @@ def main():
             parser.print_help()
             exit(1)
         else:
-            logging.info('Downloader running.')
+            logger = Log.create_logger('downloader')
+            logger.info('Downloader running.')
     if args.spider is not None:
         if args.downloader is True:
             logging.error('Choose one from spider or downloader, not both.')
             parser.print_help()
             exit(1)
         elif args.spider == 'date':
-            logging.info('Spider running to crawl data by date.')
+            logger = Log.create_logger('spider')
+            logger.info('Spider running to crawl data by date.')
             crawl_by_district()
         elif args.spider == 'district':
             logging.info('Spider running to crawl data by district.')
 
 
 def crawl_by_district():
+    logger = logging.getLogger('spider')
+
     # Read config
     start_dist, start_date, start_court = None, None, None
     start_info = Config.start
     if hasattr(start_info, 'district') and start_info.district is not None:
         start_dist = start_info.district
-        logging.info('Start District: {}'.format(start_dist))
+        logger.info('Start District: {}'.format(start_dist))
     if hasattr(start_info, 'date') and start_info.date is not None:
         start_date = start_info.date
-        logging.info('Start Date: {}'.format(start_date.strftime("%Y-%m-%d")))
+        logger.info('Start Date: {}'.format(start_date.strftime("%Y-%m-%d")))
     if hasattr(start_info, 'court') and start_info.court is not None:
         start_court = start_info.court
-        logging.info('Start Court: {}'.format(start_court))
+        logger.info('Start Court: {}'.format(start_court))
 
     max_retry = Config.config.max_retry
     data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
@@ -89,7 +90,7 @@ def crawl_by_district():
                         start = True
                     else:
                         continue
-                logging.info(dist)
+                logger.info(dist)
                 c1 = c.district(dist)
 
                 # If time_interval is interrupted, continue from the start_date
@@ -102,10 +103,10 @@ def crawl_by_district():
                 while not dist_success:
                     try:
                         for time_interval in spider.time_interval(condition=c1, start_date=cur_date):
-                            logging.info('{0} {1} {2} {3}'.format(dist,
-                                                                  time_interval[0].strftime('%Y-%m-%d'),
-                                                                  time_interval[1].strftime('%Y-%m-%d'),
-                                                                  time_interval[2]))
+                            logger.info('{0} {1} {2} {3}'.format(dist,
+                                                                 time_interval[0].strftime('%Y-%m-%d'),
+                                                                 time_interval[1].strftime('%Y-%m-%d'),
+                                                                 time_interval[2]))
                             cur_date = time_interval[0]
                             time_success = False
                             time_retry = max_retry
@@ -119,13 +120,14 @@ def crawl_by_district():
                                 if time_interval[2] > 200:
                                     try:
                                         for court in spider.court(condition=c2, district=dist, start_court=cur_court):
-                                            logging.info('{0} {1} {2} {3} {4} {5} {6}'.format(dist,
-                                                                                              time_interval[0].strftime(
-                                                                                                  '%Y-%m-%d'),
-                                                                                              time_interval[1].strftime(
-                                                                                                  '%Y-%m-%d'),
-                                                                                              court[0], court[1], court[2],
-                                                                                              court[3]))
+                                            logger.info('{0} {1} {2} {3} {4} {5} {6}'.format(dist,
+                                                                                             time_interval[0].strftime(
+                                                                                                 '%Y-%m-%d'),
+                                                                                             time_interval[1].strftime(
+                                                                                                 '%Y-%m-%d'),
+                                                                                             court[0], court[1],
+                                                                                             court[2],
+                                                                                             court[3]))
                                             if court[1] == 2:
                                                 cur_court = court[0]
                                             court_success = False
@@ -142,14 +144,14 @@ def crawl_by_district():
                                                         index = idx
                                                     court_success = True
                                                 except ErrorList as e:
-                                                    logging.error('Error when fetch content list: {0}'.format(str(e)))
+                                                    logger.error('Error when fetch content list: {0}'.format(str(e)))
                                                     court_retry -= 1
                                                     if court_retry <= 0:
                                                         s.switch_proxy()
                                                         court_retry = max_retry
                                         time_success = True
                                     except ErrorList as e:
-                                        logging.error('Error when fetch court: {0}'.format(str(e)))
+                                        logger.error('Error when fetch court: {0}'.format(str(e)))
                                         time_retry -= 1
                                         if time_retry <= 0:
                                             s.switch_proxy()
@@ -169,21 +171,21 @@ def crawl_by_district():
                                             #     print(item['id'], file=error_log)
                                         time_success = True
                                     except ErrorList as e:
-                                        logging.error('Error when fetch content list: {0}'.format(str(e)))
+                                        logger.error('Error when fetch content list: {0}'.format(str(e)))
                                         time_retry -= 1
                                         if time_retry <= 0:
                                             s.switch_proxy()
                                             time_retry = max_retry
                         dist_success = True
                     except ErrorList as e:
-                        logging.error('Error when fetch time interval: {0}'.format(str(e)))
+                        logger.error('Error when fetch time interval: {0}'.format(str(e)))
                         dist_retry -= 1
                         if dist_retry <= 0:
                             s.switch_proxy()
                             dist_retry = max_retry
             total_success = True
         except ErrorList as e:
-            logging.error('Error when fetch dist information: {0}'.format(str(e)))
+            logger.error('Error when fetch dist information: {0}'.format(str(e)))
             s.switch_proxy()
     data_file.close()
 
