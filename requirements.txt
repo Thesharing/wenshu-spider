@@ -8,3 +8,5 @@ requests
 six
 urllib3
 python-dateutil
+redis
+pymongo

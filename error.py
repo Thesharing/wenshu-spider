@@ -32,6 +32,6 @@ class NullContentError(Exception):
         return self.value
 
 
-ErrorList = (NetworkException, CheckCodeError, JSONDecodeError,
-             NullContentError, KeyError, IndexError, TypeError,
-             ChunkedEncodingError, RequestException)
+ExceptionList = (NetworkException, CheckCodeError, JSONDecodeError,
+                 NullContentError, KeyError, IndexError, TypeError,
+                 ChunkedEncodingError, RequestException)

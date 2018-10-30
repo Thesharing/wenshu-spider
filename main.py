@@ -2,12 +2,15 @@ from parameter import Parameter
 from session import Session
 from condition import Condition
 from spider import Spider
-from error import ErrorList
+from downloader import Downloader
+from error import ExceptionList
 from config import Config
 from datetime import datetime
 from log import Log
+from persistence import RedisSet, Database
 import logging
 import sys
+import os
 import json
 import argparse
 
@@ -24,28 +27,38 @@ def main():
     parser = argparse.ArgumentParser(description='Court Spider')
     parser.add_argument('-s', '--spider', nargs='?', choices=['date', 'district'], const='date',
                         help='Start a spider to crawl data by date or by district')
-    parser.add_argument('-d', '--downloader', action='store_true', help='Start a downloader')
+    parser.add_argument('-d', '--downloader', nargs='?', choices=['file', 'database'], const='database',
+                        help='Start a downloader')
     args = parser.parse_args()
 
     if args.spider is None:
-        if args.downloader is False:
+        if args.downloader is None:
             logging.error('Please specify spider or downloader to run.')
             parser.print_help()
             exit(1)
         else:
+            test_res = Database.test_redis()
+            if test_res is not True:
+                logging.error('Cannot connect to Redis: ' + str(test_res))
+                exit(1)
             logger = Log.create_logger('downloader')
             logger.info('Downloader running.')
+            if args.downloader == 'file':
+                read_content_list()
+                download()
+
     if args.spider is not None:
-        if args.downloader is True:
+        if args.downloader is not None:
             logging.error('Choose one from spider or downloader, not both.')
             parser.print_help()
             exit(1)
-        elif args.spider == 'date':
+        else:
             logger = Log.create_logger('spider')
-            logger.info('Spider running to crawl data by date.')
-            crawl_by_district()
-        elif args.spider == 'district':
-            logging.info('Spider running to crawl data by district.')
+            logger.info('Spider running to crawl data by {}.'.format(args.spider))
+            if args.spider == 'date':
+                crawl_by_district()
+            elif args.spider == 'district':
+                pass
 
 
 def crawl_by_district():
@@ -54,6 +67,7 @@ def crawl_by_district():
     # Read config
     start_dist, start_date, start_court = None, None, None
     start_info = Config.start
+    logger.info('Start Reason: {}'.format(Config.search.reason.value))
     if hasattr(start_info, 'district') and start_info.district is not None:
         start_dist = start_info.district
         logger.info('Start District: {}'.format(start_dist))
@@ -65,7 +79,7 @@ def crawl_by_district():
         logger.info('Start Court: {}'.format(start_court))
 
     max_retry = Config.config.max_retry
-    data_file = open('./data/data {}.txt'.format(datetime.now().strftime('%Y-%m-%d %H-%M-%S')), 'a', encoding='utf-8')
+    data_file = open('./data/data_{}.txt'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')), 'a', encoding='utf-8')
 
     s = Session()
     c = Condition()
@@ -143,14 +157,14 @@ def crawl_by_district():
                                                         print(item, file=data_file)
                                                         index = idx
                                                     court_success = True
-                                                except ErrorList as e:
+                                                except ExceptionList as e:
                                                     logger.error('Error when fetch content list: {0}'.format(str(e)))
                                                     court_retry -= 1
                                                     if court_retry <= 0:
                                                         s.switch_proxy()
                                                         court_retry = max_retry
                                         time_success = True
-                                    except ErrorList as e:
+                                    except ExceptionList as e:
                                         logger.error('Error when fetch court: {0}'.format(str(e)))
                                         time_retry -= 1
                                         if time_retry <= 0:
@@ -170,24 +184,68 @@ def crawl_by_district():
                                             # except:
                                             #     print(item['id'], file=error_log)
                                         time_success = True
-                                    except ErrorList as e:
+                                    except ExceptionList as e:
                                         logger.error('Error when fetch content list: {0}'.format(str(e)))
                                         time_retry -= 1
                                         if time_retry <= 0:
                                             s.switch_proxy()
                                             time_retry = max_retry
                         dist_success = True
-                    except ErrorList as e:
+                    except ExceptionList as e:
                         logger.error('Error when fetch time interval: {0}'.format(str(e)))
                         dist_retry -= 1
                         if dist_retry <= 0:
                             s.switch_proxy()
                             dist_retry = max_retry
             total_success = True
-        except ErrorList as e:
+        except ExceptionList as e:
             logger.error('Error when fetch dist information: {0}'.format(str(e)))
             s.switch_proxy()
     data_file.close()
+
+
+def read_content_list():
+    logger = logging.getLogger('downloader')
+    total = 0
+    available = 0
+    data_dir = './data'
+    database = RedisSet('spider')
+    for data_file_name in os.listdir(data_dir):
+        total_per_file = 0
+        available_per_file = 0
+        with open(os.path.join(data_dir, data_file_name), 'r', encoding='utf-8') as f:
+            for line in f.readlines():
+                try:
+                    r = json.loads(line.replace("'", '"'))
+                except json.JSONDecodeError:
+                    print('JSON Decode Error: {}'.format(line))
+                    continue
+                if 'id' not in r:
+                    print('ID not found: {}'.format(line))
+                    continue
+                case_id = r['id']
+                total_per_file += 1
+                if database.add(case_id) > 0:
+                    available_per_file += 1
+        logger.info('{0} / {1} from {2}'.format(available_per_file, total_per_file, data_file_name))
+        total += total_per_file
+        available += available_per_file
+    return total, available
+
+
+def download():
+    s = Session()
+    downloader = Downloader(sess=s)
+    database = RedisSet('spider')
+    logger = logging.getLogger('downloader')
+
+    while database.count() > 0:
+        doc_id = database.pop()
+        try:
+            downloader.download_doc(doc_id)
+        except ExceptionList as e:
+            logger.error('Error when downloading {0}: {1}'.format(doc_id, str(e)))
+            database.add(doc_id)
 
 
 # TODO: Crawl by date

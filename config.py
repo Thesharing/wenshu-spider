@@ -52,6 +52,17 @@ Config = Nested({
         'max_retry': 10,
         'proxy': True,
         'timeout': 60
+    },
+    'database': {
+        'redis': {
+            'host': 'localhost',
+            'port': 6379
+        },
+        'mongodb': {
+            'host': 'localhost',
+            'port': 27017,
+            'database': 'spider'
+        }
     }
 })
 

@@ -145,57 +145,6 @@ class Spider:
         else:
             return doc_id
 
-    def _court_info(self, doc_id):
-        """
-        根据文书DocID获取相关信息：标题、时间、浏览次数、内容等详细信息
-        """
-        url = 'http://wenshu.court.gov.cn/CreateContentJS/CreateContentJS.aspx?DocID={0}'.format(doc_id)
-        headers = {
-            'Host': 'wenshu.court.gov.cn',
-            'Origin': 'http://wenshu.court.gov.cn',
-            'User-Agent': self.sess.user_agent,
-        }
-        req = self.sess.get(url=url, headers=headers)
-        req.encoding = 'utf-8'
-        return_data = req.text.replace('\\', '')
-        with open('./content/{}.txt'.format(doc_id), 'w', encoding='utf-8') as f:
-            f.write(return_data)
-        read_count = re.findall(r'"浏览：(\d*)次"', return_data)[0]
-        court_title = re.findall(r'\"Title\":\"(.*?)\"', return_data)[0]
-        court_date = re.findall(r'\"PubDate\":\"(.*?)\"', return_data)[0]
-        court_content = re.findall(r'\"Html\":\"(.*?)\"', return_data)[0]
-        return [court_title, court_date, read_count, court_content]
-
-    def download_doc(self, doc_id):
-        """
-        根据文书DocID下载doc文档
-        """
-        court_info = self._court_info(doc_id)
-        url = 'http://wenshu.court.gov.cn/Content/GetHtml2Word'
-        headers = {
-            'Host': 'wenshu.court.gov.cn',
-            'Origin': 'http://wenshu.court.gov.cn',
-            'User-Agent': self.sess.user_agent
-        }
-        with open('./html/content.html', 'r', encoding='utf-8') as f:
-            html = f.read()
-        html = html.replace('court_title', court_info[0]).replace('court_date', court_info[1]). \
-            replace('read_count', court_info[2]).replace('court_content', court_info[3])
-        name = court_info[0]
-        data = {
-            'htmlStr': parse.quote(html),
-            'htmlName': parse.quote(name),
-            'DocID': doc_id
-        }
-        r = self.sess.post(url=url, headers=headers, data=data)
-        filename = './download/{}.doc'.format(doc_id)
-        if os.path.exists(filename):
-            self.logger.warning('{} duplicated.'.format(name))
-        else:
-            with open(filename, 'wb') as f:
-                f.write(r.content)
-            self.logger.info('{} downloaded.'.format(name))
-
     def tree_content(self, param: Parameter):
         """
         获取左侧类目分类
@@ -345,6 +294,8 @@ class Spider:
         quark = len(period_length) - 1
         period_loop = [4, 3, 3, 2, 5]
 
+        # TODO: Fix a time bug
+
         def split(start: datetime, period: int):
             # 0 - 90天; 1 - 30天; 2 - 10天; 3 - 1天
             for i in range(0, period_loop[period]):
@@ -414,9 +365,9 @@ class Spider:
                 level_count[item['Key']] = item['IntValue']
 
         if satisfy:
-            for k, v in level_count.items():
+            for idx, (k, v) in enumerate(level_count.items()):
                 if v > 0:
-                    yield None, k, True, v
+                    yield None, idx + 1, True, v
 
         else:
             start = start_court is None
