@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from config import Config
 
 
 class Log:
@@ -16,5 +17,5 @@ class Log:
         stream_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
         logger.addHandler(stream_handler)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(Config.log.level)
         return logger

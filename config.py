@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from dateutil import parser
 
 
@@ -63,6 +64,9 @@ Config = Nested({
             'port': 27017,
             'database': 'spider'
         }
+    },
+    'log': {
+        'level': 'INFO'  # CRITICAL - 50, ERROR - 40, WARNING - 30, INFO - 20, DEBUG - 10, NOTSET - 9
     }
 })
 
@@ -72,6 +76,9 @@ if os.path.isfile('config.json'):
         start_date = data['start']['date']
         if start_date is not None:
             data['start']['date'] = parser.parse(start_date)
+        log_level = data['log']['level']
+        if log_level is not None:
+            data['log']['level'] = getattr(logging, log_level)
         Config = Nested(data)
 else:
     with open('config.json', 'w', encoding='utf-8') as f:

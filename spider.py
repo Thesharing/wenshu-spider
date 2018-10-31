@@ -300,33 +300,42 @@ class Spider:
             # 0 - 90天; 1 - 30天; 2 - 10天; 3 - 1天
             for i in range(0, period_loop[period]):
                 s = start + timedelta(days=i * period_length[period])
-                e = start + timedelta(days=(i + 1) * period_length[period])
-                if start_date is None or e > start_date:
+                e = start + timedelta(days=(i + 1) * period_length[period] - 1)
+                if start_date is None or e >= start_date:
                     info = self.tree_content(Parameter(param=str(condition.date(s, e)), sess=self.sess))['裁判年份']
                     if info['IntValue'] < MAX_PAGE * 20 or period == quark:
                         yield s, e, info['IntValue']
                     else:
+                        self.logger.debug(
+                            '{} {} {}'.format(s.strftime('%Y-%m-%d'), period + 1,
+                                              info['IntValue']))
                         yield from split(s, period + 1)
 
         def tail_5_days(s, e):
             info = self.tree_content(Parameter(param=str(condition.date(s, e)), sess=self.sess))['裁判年份']
             if info['IntValue'] < MAX_PAGE * 20:
+                self.logger.debug(
+                    '{} {} {}'.format(s.strftime('%Y-%m-%d'), e.strftime('%Y-%m-%d'),
+                                      info['IntValue']))
                 yield s, e, info['IntValue']
             else:
                 cur = s
-                while cur < e:
-                    yield from split(cur, quark)
+                while cur <= e:
+                    if start_date is None or cur >= start_date:
+                        info = self.tree_content(Parameter(param=str(condition.date(s, e)), sess=self.sess))['裁判年份']
+                        yield cur, cur, info['IntValue']
                     cur = cur + timedelta(days=1)
 
         info = self.tree_content(Parameter(param=str(condition), sess=self.sess))['裁判年份']
         if info['IntValue'] < MAX_PAGE * 20:
-            yield datetime(1990, 1, 1), datetime.today() + timedelta(days=1), info['IntValue']
+            yield datetime(1990, 1, 1), datetime.today(), info['IntValue']
         else:
             for year in sorted(info['ParamList'], key=lambda item: int(item['Key']), reverse=False):
                 s = datetime(int(year['Key']), 1, 1)
-                e = datetime(int(year['Key']) + 1, 1, 1)
+                e = datetime(int(year['Key']) + 1, 1, 1) - timedelta(days=1)
                 if start_date is None or e > start_date:
                     if year['IntValue'] > MAX_PAGE * 20:
+                        self.logger.debug('{} {} {}'.format(s.strftime('%Y-%m-%d'), 0, info['IntValue']))
                         yield from split(s, 0)
                         yield from tail_5_days(s + timedelta(days=360), e)
                     else:
