@@ -251,6 +251,7 @@ def download():
 # TODO: Crawl by date
 # TODO: Downloader
 # TODO: MultiTread Support --> Task Distributor, Content List Downloader, Document Downloader
+# TODO: Extractor
 
 if __name__ == '__main__':
     main()
