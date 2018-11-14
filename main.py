@@ -22,7 +22,8 @@ def main():
 
     # TODO: Specify the process and
 
-    logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.INFO)
 
     parser = argparse.ArgumentParser(description='Court Spider')
     parser.add_argument('-s', '--spider', nargs='?', choices=['date', 'district'], const='date',
