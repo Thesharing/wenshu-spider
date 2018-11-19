@@ -221,9 +221,9 @@ class Spider:
             r = self.sess.post(url=url, headers=headers, data=data)
             t = r.text.replace('\\', '').replace('"[', '[').replace(']"', ']')
             if len(t) <= 0:
-                raise NullContentError('Receive null content in tree_content.')
+                raise NullContentError('Receive null content in court_tree_content.')
             elif t == '"remind"' or t == '"remind key"':
-                raise CheckCodeError('CheckCode Appeared in tree_content.')
+                raise CheckCodeError('CheckCode Appeared in court_tree_content.')
             else:
                 break
         json_data = json.loads(t)
@@ -238,6 +238,9 @@ class Spider:
                 if data['IntValue']:
                     type_dict['ParamList'].append({'Key': data['Key'], 'IntValue': data['IntValue']})
             tree_dict[type_name] = type_dict
+        if '法院层级' in tree_dict:
+            self.logger.critical('Error in court tree content for condition: {}'.format(str(condition)))
+            return {'中级法院': {'ParamList': []}, '基层法院': {'ParamList': []}}
         return tree_dict
 
     def reason_tree_content(self, condition: Condition, parval: str):
@@ -267,9 +270,9 @@ class Spider:
             r = self.sess.post(url=url, headers=headers, data=data)
             t = r.text.replace('\\', '').replace('"[', '[').replace(']"', ']')
             if len(t) <= 0:
-                raise NullContentError('Receive null content in tree_content.')
+                raise NullContentError('Receive null content in reason_tree_content.')
             elif t == '"remind"' or t == '"remind key"':
-                raise CheckCodeError('CheckCode Appeared in tree_content.')
+                raise CheckCodeError('CheckCode Appeared in reason_tree_content.')
             else:
                 break
         json_data = json.loads(t)
@@ -284,6 +287,9 @@ class Spider:
                 if data['IntValue']:
                     type_dict['ParamList'].append({'Key': data['Key'], 'IntValue': data['IntValue']})
             tree_dict[type_name] = type_dict
+        if '法院层级' in tree_dict:
+            self.logger.critical('Error in reason tree content for condition: {}'.format(str(condition)))
+            return {'中级法院': {'ParamList': []}, '基层法院': {'ParamList': []}}
         return tree_dict
 
     def time_interval(self, condition: Condition, start_date: datetime = None):
