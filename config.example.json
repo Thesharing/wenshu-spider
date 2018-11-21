@@ -42,5 +42,10 @@
   },
   "log": {
     "level": "DEBUG"
+  },
+  "multiprocess": {
+    "total": 8,
+    "spider": 0,
+    "downloader": 8
   }
 }
