@@ -1,26 +1,26 @@
 from datetime import datetime
 from copy import deepcopy
-from config import Config
+import config
 
 
 class Condition:
     def __init__(self):
         # 构造检索条件
 
-        self.keyword = Config.search.keyword
-        self.search_type = Config.search.type
+        self.keyword = config.Config.search.keyword
+        self.search_type = config.Config.search.type
 
-        self.reason_value = Config.search.reason.value
-        self.reason_level = Config.search.reason.level
+        self.reason_value = config.Config.search.reason.value
+        self.reason_level = config.Config.search.reason.level
         self.reason_list = ['', '案由', '二级案由', '三级案由', '四级案由', '五级案由']
 
-        self.court_value = Config.search.court.value
-        self.court_level = Config.search.court.level
-        self.court_indicator = Config.search.court.indicator
+        self.court_value = config.Config.search.court.value
+        self.court_level = config.Config.search.court.level
+        self.court_indicator = config.Config.search.court.indicator
         self.court_list = ['', '高级法院', '中级法院', '基层法院']
 
-        self.district_value = Config.search.district
-        self.params = Config.condition.dict
+        self.district_value = config.Config.search.district
+        self.params = config.Config.condition.dict
 
         self.start_date = None
         self.end_date = None

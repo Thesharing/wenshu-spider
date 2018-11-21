@@ -67,19 +67,36 @@ Config = Nested({
     },
     'log': {
         'level': 'INFO'  # CRITICAL - 50, ERROR - 40, WARNING - 30, INFO - 20, DEBUG - 10, NOTSET - 9
+    },
+    "multiprocess": {
+        "total": 2,
+        "spider": 1,
+        "downloader": 1
     }
 })
 
-if os.path.isfile('config.json'):
-    with open('config.json', 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        start_date = data['start']['date']
-        if start_date is not None:
-            data['start']['date'] = parser.parse(start_date)
-        log_level = data['log']['level']
-        if log_level is not None:
-            data['log']['level'] = getattr(logging, log_level)
-        Config = Nested(data)
-else:
-    with open('config.json', 'w', encoding='utf-8') as f:
-        json.dump(Config.data, f, ensure_ascii=False, indent=2)
+
+def read_config(file_name: str = 'config.json'):
+
+    if os.path.isfile(file_name):
+        with open(file_name, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+            data['name'] = file_name
+
+            start_date = data['start']['date']
+            if start_date is not None:
+                data['start']['date'] = parser.parse(start_date)
+
+            log_level = data['log']['level']
+            if log_level is not None:
+                data['log']['level'] = getattr(logging, log_level)
+
+            global Config
+            Config = Nested(data)
+    else:
+        with open(file_name, 'w', encoding='utf-8') as f:
+            json.dump(Config.data, f, ensure_ascii=False, indent=2)
+
+
+read_config()

@@ -10,3 +10,4 @@ urllib3
 python-dateutil
 redis
 pymongo
+beautifulsoup4

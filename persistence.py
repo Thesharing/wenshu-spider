@@ -1,25 +1,12 @@
 import redis
 import pymongo
-from config import Config
-
-
-class Database:
-
-    @staticmethod
-    def test_redis():
-        conn = redis.StrictRedis(host=Config.database.redis.host, port=Config.database.redis.port,
-                                 decode_responses=True)
-        try:
-            conn.client_list()
-            return True
-        except redis.ConnectionError as e:
-            return e
+import config
 
 
 class RedisSet:
 
     def __init__(self, name: str):
-        self.conn = redis.StrictRedis(host=Config.database.redis.host, port=Config.database.redis.port,
+        self.conn = redis.StrictRedis(host=config.Config.database.redis.host, port=config.Config.database.redis.port,
                                       decode_responses=True)
         self.name = name
 
@@ -54,8 +41,8 @@ class RedisSet:
 class MongoDB:
 
     def __init__(self, collection: str):
-        client = pymongo.MongoClient(host=Config.database.mongodb.host, port=Config.database.mongodb.port)
-        db = client[Config.database.mongodb.database]
+        client = pymongo.MongoClient(host=config.Config.database.mongodb.host, port=config.Config.database.mongodb.port)
+        db = client[config.Config.database.mongodb.database]
         self.conn = db[collection]
 
     def insert(self, documents):
@@ -87,3 +74,18 @@ class MongoDB:
 
     def all(self):
         return self.conn.find()
+
+    def count(self, filter):
+        return self.conn.count_documents(filter=filter)
+
+
+def test_redis():
+    conn = redis.StrictRedis(host=config.Config.database.redis.host, port=config.Config.database.redis.port,
+                             decode_responses=True)
+    conn.client_list()
+
+
+def test_mongodb():
+    client = pymongo.MongoClient(host=config.Config.database.mongodb.host, port=config.Config.database.mongodb.port,
+                                 serverSelectionTimeoutMS=3000, connectTimeoutMS=3000)
+    client.admin.command('ismaster')

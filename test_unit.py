@@ -48,8 +48,8 @@ def test_util():
 
 
 def test_config():
-    from config import Config
-    print(Config.config.maxRetry)
+    import config
+    print(config.Config.config.maxRetry)
 
 
 def test_condition():
@@ -68,9 +68,59 @@ def test_court():
     spider = Spider(sess=s)
     # print(spider.tree_content(param=Parameter(param=str(c), sess=s)))
     # print(spider.court_tree_content(condition=c, parval='北京市'))
-    for i in spider.court(condition=c.date(start_date=datetime(2017, 5, 15), end_date=datetime(2017, 5, 16)), district='广东省'):
+    for i in spider.court(condition=c.date(start_date=datetime(2017, 5, 15), end_date=datetime(2017, 5, 16)),
+                          district='广东省'):
         print(c.court(*i[0:3]), i[3])
 
 
+def test_court_content_list():
+    from session import Session
+    from condition import Condition
+    from datetime import datetime
+    from spider import Spider
+    s = Session()
+    c = Condition().district('山东省').date(start_date=datetime(2015, 8, 28), end_date=datetime(2015, 8, 28))
+    spider = Spider(sess=s)
+    print(c)
+    print(spider.court_tree_content(condition=c, parval='山东省'))
+
+
+def tset_mongodb():
+    from persistence import MongoDB
+    db = MongoDB('测试')
+    print(db.count({'a': 1}))
+    # res = db.insert({'a': 1})
+    # print(res.inserted_id)
+
+
+def test_func():
+    import os, time, datetime
+    print(os.getpid(), datetime.datetime.now())
+    time.sleep(3)
+
+
+def test_multiprocessing():
+    from multiprocessing import Pool
+    pool = Pool(processes=8)
+
+    for i in range(8):
+        pool.apply_async(test_func)
+
+    pool.close()
+    pool.join()
+    print('Done')
+
+
+def test_download():
+    from session import Session
+    import config
+    from persistence import MongoDB
+    from downloader import Downloader
+    s = Session()
+    db = MongoDB(config.Config.search.reason.value)
+    d = Downloader(sess=s, db=db)
+    d.download_doc('6ae92d76-c63b-4298-bb31-a89d01085071')
+
+
 if __name__ == '__main__':
-    test_court()
+    test_download()

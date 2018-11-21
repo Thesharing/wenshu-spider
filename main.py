@@ -1,18 +1,21 @@
 from parameter import Parameter
-from session import Session
+from session import Session, test_proxy
 from condition import Condition
 from spider import Spider
 from downloader import Downloader
 from error import ExceptionList
-from config import Config
 from datetime import datetime
 from log import Log
-from persistence import RedisSet, Database
+from persistence import RedisSet, MongoDB, test_redis, test_mongodb
+import config
+
+from multiprocessing import Pool
 import logging
 import sys
 import os
 import json
 import argparse
+import time
 
 
 def main():
@@ -28,34 +31,59 @@ def main():
     parser = argparse.ArgumentParser(description='Court Spider')
     parser.add_argument('-s', '--spider', nargs='?', choices=['date', 'district'], const='date',
                         help='Start a spider to crawl data by date or by district')
-    parser.add_argument('-d', '--downloader', nargs='?', choices=['file', 'database'], const='database',
+    parser.add_argument('-d', '--downloader', nargs='?', choices=['read', 'download'], const='download',
                         help='Start a downloader')
+    parser.add_argument('-c', '--config', nargs='?', help='Specify the filename of config')
     args = parser.parse_args()
+
+    # Specify the filename of config
+    if args.config is not None:
+        logging.info('Config read from {0}.'.format(args.config))
+        config.read_config(args.config)
+    else:
+        logging.info('Config read from config.json.')
 
     if args.spider is None:
         if args.downloader is None:
-            logging.error('Please specify spider or downloader to run.')
-            parser.print_help()
-            exit(1)
+
+            # Run multiprocess
+            logging.info('Multiprocess mode on.')
+            test_redis()
+            test_mongodb()
+            logging.info(test_proxy())
+
+            pool = Pool(processes=config.Config.multiprocess.total)
+
+            for i in range(config.Config.multiprocess.spider):
+                pool.apply_async(crawl_by_district)
+
+            for i in range(config.Config.multiprocess.downloader):
+                pool.apply_async(download)
+
+            pool.close()
+            pool.join()
+
         else:
-            test_res = Database.test_redis()
-            if test_res is not True:
-                logging.error('Cannot connect to Redis: ' + str(test_res))
-                exit(1)
-            logger = Log.create_logger('downloader')
-            logger.info('Downloader running.')
-            if args.downloader == 'file':
+
+            # Run single instance of downloader
+            test_redis()
+            test_mongodb()
+            logging.info(test_proxy())
+
+            if args.downloader == 'read':
                 read_content_list()
+            elif args.downloader == 'download':
                 download()
 
     if args.spider is not None:
         if args.downloader is not None:
+
             logging.error('Choose one from spider or downloader, not both.')
             parser.print_help()
             exit(1)
         else:
-            logger = Log.create_logger('spider')
-            logger.info('Spider running to crawl data by {}.'.format(args.spider))
+
+            # Run single instance of spider
             if args.spider == 'date':
                 crawl_by_district()
             elif args.spider == 'district':
@@ -63,12 +91,13 @@ def main():
 
 
 def crawl_by_district():
-    logger = logging.getLogger('spider')
+    logger = Log.create_logger('spider')
+    logger.info('Spider running to crawl data by date.')
 
     # Read config
     start_dist, start_date, start_court = None, None, None
-    start_info = Config.start
-    logger.info('Start Reason: {}'.format(Config.search.reason.value))
+    start_info = config.Config.start
+    logger.info('Start Reason: {}'.format(config.Config.search.reason.value))
     if hasattr(start_info, 'district') and start_info.district is not None:
         start_dist = start_info.district
         logger.info('Start District: {}'.format(start_dist))
@@ -79,7 +108,7 @@ def crawl_by_district():
         start_court = start_info.court
         logger.info('Start Court: {}'.format(start_court))
 
-    max_retry = Config.config.max_retry
+    max_retry = config.Config.config.max_retry
     data_file = open('./data/data_{}.txt'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')), 'a', encoding='utf-8')
 
     s = Session()
@@ -135,14 +164,11 @@ def crawl_by_district():
                                 if time_interval[2] > 200:
                                     try:
                                         for court in spider.court(condition=c2, district=dist, start_court=cur_court):
-                                            logger.info('{0} {1} {2} {3} {4} {5} {6}'.format(dist,
-                                                                                             time_interval[0].strftime(
-                                                                                                 '%Y-%m-%d'),
-                                                                                             time_interval[1].strftime(
-                                                                                                 '%Y-%m-%d'),
-                                                                                             court[0], court[1],
-                                                                                             court[2],
-                                                                                             court[3]))
+                                            logger.info('{0} {1} {2} {3} {4} {5} '
+                                                        '{6}'.format(dist,
+                                                                     time_interval[0].strftime('%Y-%m-%d'),
+                                                                     time_interval[1].strftime('%Y-%m-%d'),
+                                                                     court[0], court[1], court[2], court[3]))
                                             if court[1] == 2:
                                                 cur_court = court[0]
                                             court_success = False
@@ -179,11 +205,6 @@ def crawl_by_district():
                                                 page=20, order='法院层级', direction='asc', index=index):
                                             print(item, file=data_file)
                                             index = idx
-                                            # print(item['id'], item['name'])
-                                            # try:
-                                            #     spider.download_doc(item['id'])
-                                            # except:
-                                            #     print(item['id'], file=error_log)
                                         time_success = True
                                     except ExceptionList as e:
                                         logger.error('Error when fetch content list: {0}'.format(str(e)))
@@ -206,7 +227,8 @@ def crawl_by_district():
 
 
 def read_content_list():
-    logger = logging.getLogger('downloader')
+    logger = Log.create_logger('downloader')
+    logger.info('Downloader reading contents from local files.')
     total = 0
     available = 0
     data_dir = './data'
@@ -219,10 +241,10 @@ def read_content_list():
                 try:
                     r = json.loads(line.replace("'", '"'))
                 except json.JSONDecodeError:
-                    print('JSON Decode Error: {}'.format(line))
+                    logger.error('JSON Decode Error: {}'.format(line))
                     continue
                 if 'id' not in r:
-                    print('ID not found: {}'.format(line))
+                    logger.error('ID not found: {}'.format(line))
                     continue
                 case_id = r['id']
                 total_per_file += 1
@@ -231,28 +253,48 @@ def read_content_list():
         logger.info('{0} / {1} from {2}'.format(available_per_file, total_per_file, data_file_name))
         total += total_per_file
         available += available_per_file
+    logger.info('Data read from local file: {} total, {} available.'.format(total, available))
     return total, available
 
 
 def download():
+    logger = Log.create_logger('downloader')
+    logger.info('Downloader {0} running.'.format(os.getpid()))
     s = Session()
-    downloader = Downloader(sess=s)
-    database = RedisSet('spider')
-    logger = logging.getLogger('downloader')
+    redis = RedisSet('spider')
+    finish = RedisSet('finish')
+    mongo = MongoDB('文书')
+    downloader = Downloader(sess=s, db=mongo)
+    logger.info('Total {0} items ongoing.'.format(redis.count()))
 
-    while database.count() > 0:
-        doc_id = database.pop()
-        try:
-            downloader.download_doc(doc_id)
-        except ExceptionList as e:
-            logger.error('Error when downloading {0}: {1}'.format(doc_id, str(e)))
-            database.add(doc_id)
+    while redis.count() > 0:
+        doc_id = redis.pop()
+        doc_retry = config.Config.config.max_retry
+        time_retry = config.Config.config.max_retry
+        while True:
+            time.sleep(1)
+            try:
+                logger.info('Document {0} start.'.format(doc_id))
+                downloader.download_doc(doc_id)
+                finish.add(doc_id)
+                logger.info('Document {0} finished.'.format(doc_id))
+                break
+            except ExceptionList as e:
+                logger.error('Error when downloading {0}: {1}'.format(doc_id, str(e)))
+                time_retry -= 1
+                if time_retry <= 0:
+                    doc_retry -= 1
+                    s.switch_proxy()
+                    time_retry = config.Config.config.max_retry
+                if doc_retry <= 0:
+                    logger.error('Max error when downloading {0}: {1}'.format(doc_id, str(e)))
+                    redis.add(doc_id)
+                    break
 
-
-# TODO: Crawl by date
-# TODO: Downloader
-# TODO: MultiTread Support --> Task Distributor, Content List Downloader, Document Downloader
-# TODO: Extractor
 
 if __name__ == '__main__':
     main()
+    # TODO: Crawl by date
+    # TODO: Downloader
+    # TODO: MultiTread Support --> Task Distributor, Content List Downloader, Document Downloader
+    # TODO: Extractor
