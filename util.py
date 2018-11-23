@@ -1,10 +1,14 @@
 import json
 from datetime import datetime
+from decimal import Decimal
+from datetime import date
 from dateutil import parser
 import logging
 import os
 from math import ceil
 import re
+import sys
+import subprocess
 
 from persistence import RedisSet, test_redis
 
@@ -32,6 +36,22 @@ class CustomJsonDecoder(json.JSONDecoder):
             logging.error('JSON Decode error: {}'.format(str(e)))
         finally:
             return obj
+
+
+def encode_json(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, date):
+        return obj.strftime("%Y-%m-%d")
+    elif isinstance(obj, datetime):
+        return obj.strftime("%Y-%m-%d")
+    raise TypeError
+
+
+def git_date():
+    p = subprocess.Popen(["git", "log", "-1", "--format='%aI %s'"], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    return out.decode(sys.getdefaultencoding()).strip()[1:-1]
 
 
 def merge_doc_and_split(number: int = 1):

@@ -7,6 +7,7 @@ from error import ExceptionList
 from datetime import datetime
 from log import Log
 from persistence import RedisSet, MongoDB, test_redis, test_mongodb
+from util import git_date
 import config
 
 from multiprocessing import Pool
@@ -34,21 +35,25 @@ def main():
                         help='Start a spider to crawl data by date or by district')
     parser.add_argument('-d', '--downloader', nargs='?', choices=['read', 'download'], const='download',
                         help='Start a downloader')
+    parser.add_argument('--clean', action='store_true',
+                        help='Delete all data in Redis before read, only useful for -d read')
     parser.add_argument('-c', '--config', nargs='?', help='Specify the filename of config')
     args = parser.parse_args()
 
+    logging.info('Version: {}.'.format(git_date()))
+
     # Specify the filename of config
     if args.config is not None:
-        logging.info('Config read from {0}.'.format(args.config))
+        logging.info('Config: {0}.'.format(args.config))
         config.read_config(args.config)
     else:
-        logging.info('Config read from config.json.')
+        logging.info('Config: config.json.')
 
     if args.spider is None:
         if args.downloader is None:
 
             # Run multiprocess
-            logging.info('Multiprocess mode on.')
+            logging.info('Multiprocess Mode: On.')
             test_redis()
             test_mongodb()
             logging.info(test_proxy())
@@ -68,12 +73,12 @@ def main():
 
             # Run single instance of downloader
             test_redis()
-            test_mongodb()
-            logging.info(test_proxy())
 
             if args.downloader == 'read':
-                read_content_list()
+                read_content_list(args.clean)
             elif args.downloader == 'download':
+                test_mongodb()
+                logging.info(test_proxy())
                 download()
 
     if args.spider is not None:
@@ -236,7 +241,7 @@ def crawl_by_district():
     data_file.close()
 
 
-def read_content_list():
+def read_content_list(clean: bool = False):
     logger = Log.create_logger('downloader')
     logger.info('Downloader reading contents from local files.')
     total = 0
@@ -244,6 +249,10 @@ def read_content_list():
     data_dir = './data'
     pattern = re.compile(r"{'id': '(.+?)',")
     database = RedisSet('spider')
+
+    if clean:
+        database.flush_all()
+        logger.info('All DocID in redis has been deleted.')
 
     for data_file_name in os.listdir(data_dir):
         total_per_file = 0
@@ -265,6 +274,7 @@ def read_content_list():
         available += available_per_file
 
     logger.info('Data retrieved from local file: {} total, {} available.'.format(total, available))
+    logger.info('Total {} items in redis database.'.format(database.count()))
     return total, available
 
 

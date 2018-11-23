@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from dateutil import parser
+from util import encode_json
 
 
 class Nested:
@@ -77,7 +78,6 @@ Config = Nested({
 
 
 def read_config(file_name: str = 'config.json'):
-
     if os.path.isfile(file_name):
         with open(file_name, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -96,7 +96,8 @@ def read_config(file_name: str = 'config.json'):
             Config = Nested(data)
     else:
         with open(file_name, 'w', encoding='utf-8') as f:
-            json.dump(Config.data, f, ensure_ascii=False, indent=2)
+            Config.dict['log']['level'] = logging.getLevelName(Config.dict['log']['level'])
+            json.dump(Config.dict, f, default=encode_json, ensure_ascii=False, indent=2)
 
 
 read_config()
