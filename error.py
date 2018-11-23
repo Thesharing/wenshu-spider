@@ -1,5 +1,6 @@
 from json import JSONDecodeError
 from requests.exceptions import ChunkedEncodingError, RequestException
+from execjs._exceptions import ProgramError
 
 
 class NetworkException(Exception):
@@ -34,4 +35,4 @@ class NullContentError(Exception):
 
 ExceptionList = (NetworkException, CheckCodeError, JSONDecodeError,
                  NullContentError, KeyError, IndexError, TypeError,
-                 ChunkedEncodingError, RequestException)
+                 ChunkedEncodingError, RequestException, ProgramError)

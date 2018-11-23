@@ -115,17 +115,20 @@ def crawl_by_district():
     c = Condition()
     spider = Spider(sess=s)
 
-    total_success = False
-    while not total_success:
+    while True:
         try:
             if start_dist is not None:
                 start = False
             else:
                 start = True
 
-            # log the distribution of district
+            # Log the distribution of district
             with open('district_list.txt', 'w', encoding='utf-8') as f:
-                print(json.dumps(list(spider.district(condition=c)), ensure_ascii=False), file=f)
+                district_list = list(spider.district(condition=c))
+                if len(district_list) <= 0:
+                    logger.error('No district found, maybe wrong search condition input.')
+                    exit(-1)
+                print(json.dumps(district_list, ensure_ascii=False), file=f)
 
             for dist in spider.district(condition=c):
                 # Find the district to start
@@ -142,9 +145,10 @@ def crawl_by_district():
                 start_date = None
 
                 # Variables for retry
-                dist_success = False
                 dist_retry = max_retry
-                while not dist_success:
+                while True:
+
+                    # First fetch time interval
                     try:
                         for time_interval in spider.time_interval(condition=c1, start_date=cur_date):
                             logger.info('{0} {1} {2} {3}'.format(dist,
@@ -160,7 +164,9 @@ def crawl_by_district():
                             cur_court = start_court
                             start_court = None
 
-                            while not time_success:
+                            while True:
+
+                                # If count of that day > 200, fetch court interval
                                 if time_interval[2] > 200:
                                     try:
                                         for court in spider.court(condition=c2, district=dist, start_court=cur_court):
@@ -175,6 +181,7 @@ def crawl_by_district():
                                             court_retry = max_retry
                                             index = 1
                                             c3 = c2.court(*court[0:3])
+
                                             while not court_success:
                                                 try:
                                                     for item, idx in spider.content_list(
@@ -182,7 +189,7 @@ def crawl_by_district():
                                                                             sess=s),
                                                             page=20, order='法院层级', direction='asc', index=index):
                                                         print(item, file=data_file)
-                                                        index = idx
+                                                        index = min(idx + 1, 10)
                                                     court_success = True
                                                 except ExceptionList as e:
                                                     logger.error('Error when fetch content list: {0}'.format(str(e)))
@@ -190,13 +197,15 @@ def crawl_by_district():
                                                     if court_retry <= 0:
                                                         s.switch_proxy()
                                                         court_retry = max_retry
-                                        time_success = True
+                                        break
                                     except ExceptionList as e:
                                         logger.error('Error when fetch court: {0}'.format(str(e)))
                                         time_retry -= 1
                                         if time_retry <= 0:
                                             s.switch_proxy()
                                             time_retry = max_retry
+
+                                # If count of that day < 200, directly fetch all the doc_id
                                 else:
                                     try:
                                         for item, idx in spider.content_list(
@@ -204,22 +213,22 @@ def crawl_by_district():
                                                                 sess=s),
                                                 page=20, order='法院层级', direction='asc', index=index):
                                             print(item, file=data_file)
-                                            index = idx
-                                        time_success = True
+                                            index = min(idx + 1, 10)
+                                        break
                                     except ExceptionList as e:
                                         logger.error('Error when fetch content list: {0}'.format(str(e)))
                                         time_retry -= 1
                                         if time_retry <= 0:
                                             s.switch_proxy()
                                             time_retry = max_retry
-                        dist_success = True
+                        break
                     except ExceptionList as e:
                         logger.error('Error when fetch time interval: {0}'.format(str(e)))
                         dist_retry -= 1
                         if dist_retry <= 0:
                             s.switch_proxy()
                             dist_retry = max_retry
-            total_success = True
+            break
         except ExceptionList as e:
             logger.error('Error when fetch dist information: {0}'.format(str(e)))
             s.switch_proxy()
@@ -261,35 +270,62 @@ def download():
     logger = Log.create_logger('downloader')
     logger.info('Downloader {0} running.'.format(os.getpid()))
     s = Session()
+
     redis = RedisSet('spider')
     finish = RedisSet('finish')
+    progress = RedisSet('progress')
+    failed = RedisSet('failed')
+
     mongo = MongoDB('文书')
     downloader = Downloader(sess=s, db=mongo)
-    logger.info('Total {0} items ongoing.'.format(redis.count()))
 
-    while redis.count() > 0:
-        doc_id = redis.pop()
-        doc_retry = config.Config.config.max_retry
+    def work(doc_id):
+        doc_retry = 3
         time_retry = config.Config.config.max_retry
+        logger.info('Document {0} start.'.format(doc_id))
         while True:
             time.sleep(1)
+
             try:
-                logger.info('Document {0} start.'.format(doc_id))
                 downloader.download_doc(doc_id)
+                progress.remove(doc_id)
                 finish.add(doc_id)
                 logger.info('Document {0} finished.'.format(doc_id))
                 break
+
             except ExceptionList as e:
                 logger.error('Error when downloading {0}: {1}'.format(doc_id, str(e)))
                 time_retry -= 1
+
+                # Retry once more
                 if time_retry <= 0:
                     doc_retry -= 1
                     s.switch_proxy()
                     time_retry = config.Config.config.max_retry
+
+                # Fail too many times, try another one
                 if doc_retry <= 0:
-                    logger.error('Max error when downloading {0}: {1}'.format(doc_id, str(e)))
-                    redis.add(doc_id)
+                    logger.critical('Max error when downloading {0}: {1}'.format(doc_id, str(e)))
+                    progress.remove(doc_id)
+                    failed.add(doc_id)
                     break
+
+    # Put all item_id in progress in last session back to the waiting pool
+    idx = 0
+    while progress.count() > 0:
+        item_id = progress.pop()
+        idx += 1
+        redis.add(item_id)
+
+    if idx > 0:
+        logger.info('{0} items in last session are recovered.'.format(idx))
+
+    logger.info('Total {0} items ongoing.'.format(redis.count()))
+
+    while redis.count() > 0:
+        item_id = redis.pop()
+        progress.add(item_id)
+        work(item_id)
 
 
 if __name__ == '__main__':

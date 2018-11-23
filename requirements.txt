@@ -11,3 +11,4 @@ python-dateutil
 redis
 pymongo
 beautifulsoup4
+lxml
