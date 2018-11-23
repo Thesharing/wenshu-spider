@@ -16,6 +16,7 @@ import os
 import json
 import argparse
 import time
+import re
 
 
 def main():
@@ -241,28 +242,29 @@ def read_content_list():
     total = 0
     available = 0
     data_dir = './data'
+    pattern = re.compile(r"{'id': '(.+?)',")
     database = RedisSet('spider')
+
     for data_file_name in os.listdir(data_dir):
         total_per_file = 0
         available_per_file = 0
         with open(os.path.join(data_dir, data_file_name), 'r', encoding='utf-8') as f:
             for line in f.readlines():
-                try:
-                    r = json.loads(line.replace("'", '"'))
-                except json.JSONDecodeError:
-                    logger.error('JSON Decode Error: {}'.format(line))
-                    continue
-                if 'id' not in r:
-                    logger.error('ID not found: {}'.format(line))
-                    continue
-                case_id = r['id']
-                total_per_file += 1
-                if database.add(case_id) > 0:
-                    available_per_file += 1
-        logger.info('{0} / {1} from {2}'.format(available_per_file, total_per_file, data_file_name))
+                line = line.strip()
+                if len(line) > 0:
+                    res = pattern.findall(line)
+                    if len(res) > 0:
+                        case_id = res[0]
+                        total_per_file += 1
+                        if database.add(case_id) > 0:
+                            available_per_file += 1
+                    else:
+                        logging.info('ID not found: {0}.'.format(line))
+        logger.info('Retrieve {0} / {1} from {2}.'.format(available_per_file, total_per_file, data_file_name))
         total += total_per_file
         available += available_per_file
-    logger.info('Data read from local file: {} total, {} available.'.format(total, available))
+
+    logger.info('Data retrieved from local file: {} total, {} available.'.format(total, available))
     return total, available
 
 

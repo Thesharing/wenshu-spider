@@ -4,6 +4,7 @@ from dateutil import parser
 import logging
 import os
 from math import ceil
+import re
 
 from persistence import RedisSet, test_redis
 
@@ -38,39 +39,36 @@ def merge_doc_and_split(number: int = 1):
                         level=logging.INFO)
 
     data = dict()
-
-    decode_error, id_not_found, duplicated = 0, 0, 0
+    id_not_found, duplicated = 0, 0
     data_dir = './untracked/data'
+    pattern = re.compile(r"{'id': '(.+?)',")
+
     for data_file_name in os.listdir(data_dir):
         with open(os.path.join(data_dir, data_file_name), 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 line = line.strip()
-                try:
-                    r = json.loads(line.replace("'", '"'))
-                except json.JSONDecodeError:
-                    logging.error('JSON Decode Error {}.'.format(line))
-                    decode_error += 1
-                    continue
-                if 'id' not in r or len(r['id']) <= 0:
-                    logging.error('ID not found: {}.'.format(line))
-                    id_not_found += 1
-                    continue
-                case_id = r['id']
-                if case_id not in data:
-                    data[case_id] = line
-                else:
-                    logging.warning('ID duplicated: {}.'.format(case_id))
-                    duplicated += 1
-    logging.info('Total: {0}, Available: {1}, JSON Decode Error: {2}, ID not found: {3}, Duplicated: {4}'.format(
-        len(data) + decode_error + id_not_found + duplicated, len(data), decode_error, id_not_found, duplicated))
+                if len(line) > 0:
+                    res = pattern.findall(line)
+                    if len(res) > 0:
+                        case_id = res[0]
+                        if case_id not in data:
+                            data[case_id] = line
+                        else:
+                            logging.warning('ID duplicated: {}.'.format(case_id))
+                            duplicated += 1
+                    else:
+                        logging.info('ID not found: {0}.'.format(line))
+                        id_not_found += 1
+    logging.info('Total: {0}, Available: {1}, ID not found: {2}, Duplicated: {3}'.format(
+        len(data) + id_not_found + duplicated, len(data), id_not_found, duplicated))
 
     result_dir = './untracked/split'
-
     if not os.path.isdir(result_dir):
         os.mkdir(result_dir)
 
     piece_size = ceil(len(data) / number)
     data = list(data.values())
+
     for piece_idx in range(number):
         with open(os.path.join(result_dir, '{}.txt'.format(piece_idx + 1)), 'w', encoding='utf-8') as f:
             for item in data[piece_idx * piece_size: (piece_idx + 1) * piece_size]:
