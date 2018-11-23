@@ -64,6 +64,8 @@ def merge_doc_and_split(number: int = 1):
     pattern = re.compile(r"{'id': '(.+?)',")
 
     for data_file_name in os.listdir(data_dir):
+        if data_file_name[-4:] != '.txt':
+            continue
         with open(os.path.join(data_dir, data_file_name), 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 line = line.strip()

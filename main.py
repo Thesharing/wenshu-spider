@@ -243,10 +243,10 @@ def crawl_by_district():
 
 def read_content_list(clean: bool = False):
     logger = Log.create_logger('downloader')
-    logger.info('Downloader reading contents from local files.')
     total = 0
     available = 0
-    data_dir = './data'
+    data_dir = './temp'
+    logger.info('Downloader reading contents from local files in {0}.'.format(data_dir))
     pattern = re.compile(r"{'id': '(.+?)',")
     database = RedisSet('spider')
 
@@ -255,6 +255,8 @@ def read_content_list(clean: bool = False):
         logger.info('All DocID in redis has been deleted.')
 
     for data_file_name in os.listdir(data_dir):
+        if data_file_name[-4:] != '.txt':
+            continue
         total_per_file = 0
         available_per_file = 0
         with open(os.path.join(data_dir, data_file_name), 'r', encoding='utf-8') as f:
