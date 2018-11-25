@@ -35,4 +35,5 @@ class NullContentError(Exception):
 
 ExceptionList = (NetworkException, CheckCodeError, JSONDecodeError,
                  NullContentError, KeyError, IndexError, TypeError,
-                 ChunkedEncodingError, RequestException, ProgramError)
+                 ChunkedEncodingError, RequestException, ProgramError,
+                 UnicodeEncodeError, UnicodeDecodeError)
