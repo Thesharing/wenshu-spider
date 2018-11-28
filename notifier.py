@@ -53,10 +53,12 @@ class Notifier:
                 saved_count = count
         if self.batch > 0:
             progress_count = saved_count - self.last_saved_count
-            self.average = (self.average * self.batch + progress_count) / (self.batch + 1)
+            self.average = (self.average * (self.batch - 1) + progress_count) / self.batch
             speed = ceil(self.average * (60 / self.period))
             eta = ongoing_count / speed
             output += 'Download: {} items | Average: {} item/h | ETA: {} hours'.format(progress_count, speed, eta)
+        else:
+            self.last_saved_count = saved_count
         self.batch += 1
         return output
 
