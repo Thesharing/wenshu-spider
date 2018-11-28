@@ -1,23 +1,24 @@
-from parameter import Parameter
-from session import Session, test_proxy
-from condition import Condition
-from spider import Spider
-from downloader import Downloader
-from error import ExceptionList
-from datetime import datetime
-from log import Log
-from persistence import RedisSet, MongoDB, test_redis, test_mongodb
-from util import git_date
-import config
-
-from multiprocessing import Pool
-import logging
-import sys
 import os
-import json
-import argparse
-import time
 import re
+import sys
+import time
+import json
+import logging
+import argparse
+from datetime import datetime
+from multiprocessing import Pool
+
+import config
+from log import Log
+from spider import Spider
+from util import git_date
+from parameter import Parameter
+from error import ExceptionList
+from condition import Condition
+from downloader import Downloader
+from session import Session, test_proxy
+from notifier import WeChatNotifier, EmailNotifier
+from persistence import RedisSet, MongoDB, LocalFile, test_redis, test_mongodb
 
 
 def main():
@@ -25,16 +26,26 @@ def main():
         print('Python >= 3.5 is required, you are using {}.{}.'.format(sys.version_info.major, sys.version_info.minor))
         exit(1)
 
-    # TODO: Specify the process and
-
     logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
                         level=logging.INFO)
 
     parser = argparse.ArgumentParser(description='Court Spider')
-    parser.add_argument('-s', '--spider', nargs='?', choices=['date', 'district'], const='date',
-                        help='Start a spider to crawl data by date or by district')
-    parser.add_argument('-d', '--downloader', nargs='?', choices=['read', 'download'], const='download',
-                        help='Start a downloader')
+    sub_parser = parser.add_subparsers(description='Functions of Court Spider', dest='function')
+    parser_spider = sub_parser.add_parser('spider', help='Start a spider', aliases=['s'])
+    group_spider = parser_spider.add_mutually_exclusive_group()
+    group_spider.add_argument('--date', action='store_const', dest='type', const='date',
+                              help='Crawl data by date')
+    group_spider.add_argument('--district', action='store_const', dest='type', const='district',
+                              help='Crawl data by district')
+    parser_spider.set_defaults(type='district')
+    parser_downloader = sub_parser.add_parser('downloader', help='Start a downloader', aliases=['d'])
+    group_downloader = parser_downloader.add_mutually_exclusive_group()
+    group_downloader.add_argument('--read', action='store_const', dest='type', const='read',
+                                  help='Read data from files')
+    group_downloader.add_argument('--download', action='store_const', dest='type', const='download',
+                                  help='Download docs')
+    parser_downloader.set_defaults(type='download')
+    parser_notifier = sub_parser.add_parser('notifier', help='Start a notifier', aliases=['n'])
     parser.add_argument('--clean', action='store_true',
                         help='Delete all data in Redis before read, only useful for -d read')
     parser.add_argument('-c', '--config', nargs='?', help='Specify the filename of config')
@@ -49,56 +60,52 @@ def main():
     else:
         logging.info('Config: config.json.')
 
-    if args.spider is None:
-        if args.downloader is None:
+    if args.function is None:
+        # Run multiprocess
+        logging.info('Multiprocess Mode: On.')
+        test_redis()
+        test_mongodb()
+        logging.info(test_proxy())
 
-            # Run multiprocess
-            logging.info('Multiprocess Mode: On.')
-            test_redis()
+        pool = Pool(processes=config.Config.multiprocess.total)
+
+        for i in range(config.Config.multiprocess.spider):
+            pool.apply_async(crawl_by_district)
+
+        for i in range(config.Config.multiprocess.downloader):
+            pool.apply_async(download)
+
+        for i in range(config.Config.multiprocess.notifier):
+            pool.apply_async(notify)
+
+        pool.close()
+        pool.join()
+
+    elif args.function == 'spider' or args.function == 's':
+        # Run single instance of spider
+        if args.type == 'date':
+            pass
+        elif args.type == 'district':
+            crawl_by_district()
+
+    elif args.function == 'downloader' or args.function == 'd':
+        # Run single instance of downloader
+        test_redis()
+        if args.type == 'read':
+            read_content_list(args.clean)
+        elif args.type == 'download':
             test_mongodb()
             logging.info(test_proxy())
+            download()
 
-            pool = Pool(processes=config.Config.multiprocess.total)
-
-            for i in range(config.Config.multiprocess.spider):
-                pool.apply_async(crawl_by_district)
-
-            for i in range(config.Config.multiprocess.downloader):
-                pool.apply_async(download)
-
-            pool.close()
-            pool.join()
-
-        else:
-
-            # Run single instance of downloader
-            test_redis()
-
-            if args.downloader == 'read':
-                read_content_list(args.clean)
-            elif args.downloader == 'download':
-                test_mongodb()
-                logging.info(test_proxy())
-                download()
-
-    if args.spider is not None:
-        if args.downloader is not None:
-
-            logging.error('Choose one from spider or downloader, not both.')
-            parser.print_help()
-            exit(1)
-        else:
-
-            # Run single instance of spider
-            if args.spider == 'date':
-                crawl_by_district()
-            elif args.spider == 'district':
-                pass
+    elif args.function == 'notifier' or args.function == 'n':
+        # Run single instance of notifier:
+        notify()
 
 
 def crawl_by_district():
     logger = Log.create_logger('spider')
-    logger.info('Spider running to crawl data by date.')
+    logger.info('Spider running to crawl data by district.')
 
     # Read config
     start_dist, start_date, start_court = None, None, None
@@ -340,6 +347,30 @@ def download():
         item_id = redis.pop()
         progress.add(item_id)
         work(item_id)
+
+
+def notify():
+    logger = Log.create_logger('notifier')
+    logger.info('Notifier {0} running'.format(os.getpid()))
+
+    databases = [RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
+                 LocalFile('./download')]
+
+    if config.Config.notifier.type == 'wechat':
+        notifier = WeChatNotifier(databases=databases, ongoing='spider', saved='文书',
+                                  period=config.Config.notifier.period, receiver=config.Config.notifier.wechat.receiver,
+                                  scan_in_cmd=config.Config.notifier.wechat.cmd)
+    elif config.Config.notifier.type == 'email':
+        notifier = EmailNotifier(databases=databases, ongoing='spider', saved='文书',
+                                 period=config.Config.notifier.period, sender=config.Config.notifier.email.sender,
+                                 password=config.Config.notifier.email.password,
+                                 server_addr=config.Config.notifier.email.server_addr,
+                                 ssl=config.Config.notifier.email.ssl,
+                                 receiver=config.Config.notifier.email.receiver)
+    else:
+        logger.error('Config error: not supported notifier type {0}'.format(config.Config.notifier.type))
+        return
+    notifier.run()
 
 
 if __name__ == '__main__':

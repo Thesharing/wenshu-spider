@@ -122,5 +122,18 @@ def test_download():
     d.download_doc('6ae92d76-c63b-4298-bb31-a89d01085071')
 
 
+def test_notifier():
+    from notifier import WeChatNotifier, EmailNotifier
+    from persistence import RedisSet, MongoDB, LocalFile
+    # n = WeChatNotifier(
+    #     [RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书')],
+    #     ongoing='spider', saved='文书', period=1, receiver='filehelper')
+    n = EmailNotifier([RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
+                       LocalFile('./download')],
+                      ongoing='spider', saved='文书', period=1, sender='thesharing@163.com', password='HZL04291316wy',
+                      server_addr="smtp.163.com")
+    n.run()
+
+
 if __name__ == '__main__':
-    test_download()
+    test_notifier()

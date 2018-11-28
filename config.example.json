@@ -46,6 +46,22 @@
   "multiprocess": {
     "total": 8,
     "spider": 0,
-    "downloader": 8
+    "downloader": 8,
+    "notifier": 0
+  },
+  "notifier": {
+    "type": "wechat",
+    "period": 10,
+    "wechat": {
+      "receiver": "filehelper",
+      "cmd": false
+    },
+    "email": {
+      "sender": "aaa@bbb.ccc",
+      "password": "aaabbbccc",
+      "server_addr": "smtp.bbb.ccc",
+      "receiver": "aaa@bbb.ccc",
+      "ssl": false
+    }
   }
 }

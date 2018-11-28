@@ -1,14 +1,28 @@
+import os
+from abc import abstractmethod
+
 import redis
 import pymongo
+
 import config
 
 
-class RedisSet:
+class Database:
+    def __init__(self, name: str, db_type):
+        self.name = name
+        self.type = db_type
+
+    @abstractmethod
+    def count(self):
+        pass
+
+
+class RedisSet(Database):
 
     def __init__(self, name: str):
+        super(RedisSet, self).__init__(name, 'Redis')
         self.conn = redis.StrictRedis(host=config.Config.database.redis.host, port=config.Config.database.redis.port,
                                       decode_responses=True)
-        self.name = name
 
     def add(self, values):
         return self.conn.sadd(self.name, values)
@@ -38,9 +52,10 @@ class RedisSet:
         return self.conn.delete(self.name)
 
 
-class MongoDB:
+class MongoDB(Database):
 
     def __init__(self, collection: str):
+        super(MongoDB, self).__init__(collection, 'MongoDB')
         client = pymongo.MongoClient(host=config.Config.database.mongodb.host, port=config.Config.database.mongodb.port)
         db = client[config.Config.database.mongodb.database]
         self.conn = db[collection]
@@ -75,8 +90,30 @@ class MongoDB:
     def all(self):
         return self.conn.find()
 
-    def count(self, filter):
-        return self.conn.count_documents(filter=filter)
+    def count(self, filter=None):
+        if filter is None:
+            return self.conn.count_documents(filter={})
+        else:
+            return self.conn.count_documents(filter=filter)
+
+
+class LocalFile(Database):
+    def __init__(self, file_path: str, file_type=None):
+        super(LocalFile, self).__init__(os.path.basename(file_path), 'LocalFile')
+        self.file_path = file_path
+        self.file_type = file_type
+
+    def count(self):
+        if os.path.isdir(self.file_path):
+            if self.file_type:
+                return len([name for name in os.listdir(self.file_path) if
+                            os.path.isfile(os.path.join(self.file_path, name)) and os.path.splitext(
+                                name) == self.file_type])
+            else:
+                return len([name for name in os.listdir(self.file_path)
+                            if os.path.isfile(os.path.join(self.file_path, name))])
+        else:
+            return 0
 
 
 def test_redis():

@@ -1,16 +1,15 @@
 import json
+import logging
+import os
+import re
+import subprocess
+import sys
+
 from datetime import datetime
 from decimal import Decimal
 from datetime import date
 from dateutil import parser
-import logging
-import os
 from math import ceil
-import re
-import sys
-import subprocess
-
-from persistence import RedisSet, test_redis
 
 
 class CustomJsonEncoder(json.JSONEncoder):
@@ -60,7 +59,7 @@ def merge_doc_and_split(number: int = 1):
 
     data = dict()
     id_not_found, duplicated = 0, 0
-    data_dir = './untracked/data'
+    data_dir = './temp/data'
     pattern = re.compile(r"{'id': '(.+?)',")
 
     for data_file_name in os.listdir(data_dir):
@@ -84,7 +83,7 @@ def merge_doc_and_split(number: int = 1):
     logging.info('Total: {0}, Available: {1}, ID not found: {2}, Duplicated: {3}'.format(
         len(data) + id_not_found + duplicated, len(data), id_not_found, duplicated))
 
-    result_dir = './untracked/split'
+    result_dir = './temp/split'
     if not os.path.isdir(result_dir):
         os.mkdir(result_dir)
 
@@ -101,9 +100,10 @@ def merge_doc_and_split(number: int = 1):
 
 
 def export_failed_doc_id():
+    from persistence import RedisSet, test_redis
     test_redis()
     redis = RedisSet('failed')
-    save_path = './untracked/FailedDocID.txt'
+    save_path = './temp/FailedDocID.txt'
     with open(save_path, 'a', encoding='utf-8') as f:
         for item in redis.all():
             print(item, file=f)
