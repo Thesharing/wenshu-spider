@@ -110,5 +110,13 @@ def export_failed_doc_id():
     logging.info('Total {0} items are exported to {1}.'.format(redis.count(), save_path))
 
 
+def display_progress():
+    from notifier import Notifier
+    from persistence import RedisSet, MongoDB, LocalFile
+    n = Notifier([RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
+                  LocalFile('./download')], ongoing='spider', saved='文书', period=1)
+    print(n.watch())
+
+
 if __name__ == '__main__':
-    export_failed_doc_id()
+    display_progress()

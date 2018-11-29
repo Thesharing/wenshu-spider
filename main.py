@@ -40,14 +40,14 @@ def main():
     parser_spider.set_defaults(type='district')
     parser_downloader = sub_parser.add_parser('downloader', help='Start a downloader', aliases=['d'])
     group_downloader = parser_downloader.add_mutually_exclusive_group()
+    group_downloader.add_argument('--clean', action='store_const', dest='type', const='clean',
+                                  help='Delete all data in Redis before read')
     group_downloader.add_argument('--read', action='store_const', dest='type', const='read',
                                   help='Read data from files')
     group_downloader.add_argument('--download', action='store_const', dest='type', const='download',
                                   help='Download docs')
     parser_downloader.set_defaults(type='download')
     parser_notifier = sub_parser.add_parser('notifier', help='Start a notifier', aliases=['n'])
-    parser.add_argument('--clean', action='store_true',
-                        help='Delete all data in Redis before read, only useful for -d read')
     parser.add_argument('-c', '--config', nargs='?', help='Specify the filename of config')
     args = parser.parse_args()
 
@@ -96,7 +96,9 @@ def main():
         # Run single instance of downloader
         test_redis()
         if args.type == 'read':
-            read_content_list(args.clean)
+            read_content_list()
+        elif args.type == 'clean':
+            clean_content_list()
         elif args.type == 'download':
             test_mongodb()
             logging.info(test_proxy())
@@ -173,7 +175,6 @@ def crawl_by_district():
                                                                  time_interval[1].strftime('%Y-%m-%d'),
                                                                  time_interval[2]))
                             cur_date = time_interval[0]
-                            time_success = False
                             time_retry = max_retry
                             index = 1
                             c2 = c1.date(time_interval[0], time_interval[1])
@@ -194,12 +195,11 @@ def crawl_by_district():
                                                                      court[0], court[1], court[2], court[3]))
                                             if court[1] == 2:
                                                 cur_court = court[0]
-                                            court_success = False
                                             court_retry = max_retry
                                             index = 1
                                             c3 = c2.court(*court[0:3])
 
-                                            while not court_success:
+                                            while True:
                                                 try:
                                                     for item, idx in spider.content_list(
                                                             param=Parameter(param=str(c3),
@@ -207,7 +207,7 @@ def crawl_by_district():
                                                             page=20, order='法院层级', direction='asc', index=index):
                                                         print(item, file=data_file)
                                                         index = min(idx + 1, 10)
-                                                    court_success = True
+                                                    break
                                                 except ExceptionList as e:
                                                     logger.error('Error when fetch content list: {0}'.format(str(e)))
                                                     court_retry -= 1
@@ -252,7 +252,14 @@ def crawl_by_district():
     data_file.close()
 
 
-def read_content_list(clean: bool = False):
+def clean_content_list():
+    logger = Log.create_logger('downloader')
+    database = RedisSet('spider')
+    database.flush_all()
+    logger.info('All DocID in redis has been deleted.')
+
+
+def read_content_list():
     logger = Log.create_logger('downloader')
     total = 0
     available = 0
@@ -260,10 +267,6 @@ def read_content_list(clean: bool = False):
     logger.info('Downloader reading contents from local files in {0}.'.format(data_dir))
     pattern = re.compile(r"{'id': '(.+?)',")
     database = RedisSet('spider')
-
-    if clean:
-        database.flush_all()
-        logger.info('All DocID in redis has been deleted.')
 
     for data_file_name in os.listdir(data_dir):
         if data_file_name[-4:] != '.txt':
@@ -344,6 +347,15 @@ def download():
 
     if idx > 0:
         logger.info('{0} items in last session are recovered.'.format(idx))
+
+    idx = 0
+    while failed.count() > 0:
+        item_id = failed.pop()
+        idx += 1
+        redis.add(item_id)
+
+    if idx > 0:
+        logger.info('{0} items failed in past are recovered.'.format(idx))
 
     logger.info('Total {0} items ongoing.'.format(redis.count()))
 
