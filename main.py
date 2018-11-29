@@ -78,6 +78,10 @@ def main():
         for i in range(config.Config.multiprocess.notifier):
             pool.apply_async(notify)
 
+        logging.info('Processes: Total {} | Spider {} | Downloader {} | Notifier {}'.format(
+            config.Config.multiprocess.total, config.Config.multiprocess.spider,
+            config.Config.multiprocess.downloader, config.Config.multiprocess.notifier))
+
         pool.close()
         pool.join()
 
