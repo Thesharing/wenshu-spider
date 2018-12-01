@@ -71,6 +71,7 @@ class Notifier:
 
     def run(self):
         self.login()
+        self.work()
         self.scheduler.start()
 
     @abstractmethod
