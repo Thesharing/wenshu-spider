@@ -52,6 +52,49 @@ class RedisSet(Database):
         return self.conn.delete(self.name)
 
 
+class RedisHash(Database):
+
+    def __init__(self, name: str):
+        super(RedisHash, self).__init__(name, 'Redis')
+        self.conn = redis.StrictRedis(host=config.Config.database.redis.host, port=config.Config.database.redis.port,
+                                      decode_responses=True)
+
+    def add(self, key):
+        return self.conn.hsetnx(self.name, key, 0)
+
+    def count(self):
+        return self.conn.hlen(self.name)
+
+    def remove(self, keys):
+        return self.conn.hdel(self.name, keys)
+
+    def exists(self, key):
+        return self.conn.hexists(self.name, key)
+
+    def all(self):
+        return self.conn.hgetall(self.name)
+
+    def get(self, keys):
+        """
+        :param keys: a single key or a list of keys
+        :return: a string, or a list of string correspondingly
+        """
+        if type(keys) is list:
+            return self.conn.hmget(self.name, keys)
+        else:
+            return self.conn.hget(self.name, keys)
+
+    def set(self, mapping: dict):
+        if len(mapping) > 1:
+            return self.conn.hmset(self.name, mapping)
+        elif len(mapping) == 1:
+            (key, value), = mapping.items()
+            return self.conn.hset(self.name, key, value)
+
+    def increment(self, key, value: int = 1):
+        return self.conn.hincrby(self.name, key, value)
+
+
 class MongoDB(Database):
 
     def __init__(self, collection: str):

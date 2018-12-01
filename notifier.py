@@ -1,7 +1,7 @@
 import logging
 import atexit
 import os
-from math import ceil
+from math import ceil, floor
 from abc import abstractmethod
 from typing import List, Union
 
@@ -16,16 +16,17 @@ from apscheduler.schedulers.base import STATE_STOPPED
 
 import itchat
 
-from persistence import Database, test_redis, test_mongodb
+from persistence import Database, RedisHash, test_redis, test_mongodb
 
 
 class Notifier:
     def __init__(self, databases: List[Database], ongoing: str, saved: str, period: int, background: bool = False):
         test_redis()
         test_mongodb()
-        self.last_saved_count = 0
-        self.average = 0
-        self.batch = 0
+        self.db = RedisHash('notifier')
+        self.db.add('last_saved_count')
+        self.db.add('average')
+        self.db.add('batch')
         self.databases = databases
         self.ongoing = ongoing
         self.saved = saved
@@ -41,7 +42,8 @@ class Notifier:
         atexit.register(self.exit)
 
     def watch(self):
-        output = '[{}] '.format(self.batch + 1)
+        batch = int(self.db.get('batch'))
+        output = '[{}] '.format(batch + 1)
         ongoing_count = 0
         saved_count = 0
         for database in self.databases:
@@ -51,14 +53,16 @@ class Notifier:
                 ongoing_count = count
             elif database.name == self.saved:
                 saved_count = count
-        if self.batch > 0:
-            progress_count = saved_count - self.last_saved_count
-            self.average = (self.average * (self.batch - 1) + progress_count) / self.batch
-            speed = ceil(self.average * (60 / self.period))
+        if batch > 0:
+            progress_count = saved_count - int(self.db.get('last_saved_count'))
+            average = int(self.db.get('average'))
+            average = (average * (batch - 1) + progress_count) / batch
+            speed = ceil(average * (60 / self.period))
             eta = ongoing_count / speed
             output += 'Download: {} items | Average: {} item/h | ETA: {} hours'.format(progress_count, speed, eta)
-        self.last_saved_count = saved_count
-        self.batch += 1
+            self.db.set({'average': floor(average)})
+        self.db.set({'last_saved_count': saved_count})
+        self.db.increment('batch')
         return output
 
     def listen(self, event):
@@ -79,7 +83,7 @@ class Notifier:
 
     @abstractmethod
     def exit(self):
-        raise NotImplementedError
+        pass
 
 
 class WeChatNotifier(Notifier):

@@ -123,16 +123,17 @@ def test_download():
 
 
 def test_notifier():
-    from notifier import WeChatNotifier, EmailNotifier
+    from notifier import WeChatNotifier, EmailNotifier, Notifier
     from persistence import RedisSet, MongoDB, LocalFile
-    # n = WeChatNotifier(
-    #     [RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书')],
-    #     ongoing='spider', saved='文书', period=1, receiver='filehelper')
-    n = EmailNotifier([RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
-                       LocalFile('./download')],
-                      ongoing='spider', saved='文书', period=1, sender='thesharing@163.com', password='HZL04291316wy',
-                      server_addr="smtp.163.com")
-    n.run()
+    n = Notifier(
+        [RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
+         LocalFile('./download')],
+        ongoing='spider', saved='文书', period=1)
+    # n = EmailNotifier([RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
+    #                    LocalFile('./download')],
+    #                   ongoing='spider', saved='文书', period=1, sender='thesharing@163.com', password='HZL04291316wy',
+    #                   server_addr="smtp.163.com")
+    print(n.watch())
 
 
 if __name__ == '__main__':
