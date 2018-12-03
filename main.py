@@ -19,7 +19,7 @@ from error import ExceptionList
 from condition import Condition
 from downloader import Downloader
 from session import Session, test_proxy
-from notifier import WeChatNotifier, EmailNotifier
+from notifier import WeChatNotifier, EmailNotifier, TelegramNotifier
 from persistence import RedisSet, MongoDB, LocalFile, test_redis, test_mongodb
 
 
@@ -397,6 +397,11 @@ def notify():
                                  server_addr=config.Config.notifier.email.server_addr,
                                  ssl=config.Config.notifier.email.ssl,
                                  receiver=config.Config.notifier.email.receiver)
+    elif config.Config.notifier.type == 'telegram':
+        notifier = TelegramNotifier(databases=databases, ongoing='spider', saved='文书',
+                                    period=config.Config.notifier.period, token=config.Config.notifier.telegram.token,
+                                    chat_id=config.Config.notifier.telegram.chat_id,
+                                    proxy=config.Config.notifier.telegram.proxy)
     else:
         logger.error('Config error: not supported notifier type {0}'.format(config.Config.notifier.type))
         return
