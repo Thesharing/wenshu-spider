@@ -133,11 +133,18 @@ class MongoDB(Database):
     def all(self):
         return self.conn.find()
 
-    def count(self, filter=None):
+    def count(self, filter=None, **kwargs):
         if filter is None:
-            return self.conn.count_documents(filter={})
+            return self.conn.count_documents(filter={}, **kwargs)
         else:
-            return self.conn.count_documents(filter=filter)
+            return self.conn.count_documents(filter=filter, **kwargs)
+
+    def create_index(self, index):
+        """
+        :param index: [('key', pymongo.HASHED)]
+        :return: Index Name
+        """
+        return self.conn.create_index(index)
 
 
 class LocalFile(Database):

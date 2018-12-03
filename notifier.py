@@ -15,11 +15,13 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_MAX_INSTANCES
 from apscheduler.schedulers.base import STATE_STOPPED
 
 import itchat
+from telegram import ext
 
 from persistence import Database, RedisHash, test_redis, test_mongodb
 
 
 class Notifier:
+
     def __init__(self, databases: List[Database], ongoing: str, saved: str, period: int, background: bool = False):
         test_redis()
         test_mongodb()
@@ -58,7 +60,7 @@ class Notifier:
             average = int(self.db.get('average'))
             average = (average * (batch - 1) + progress_count) / batch
             speed = ceil(average * (60 / self.period))
-            eta = ongoing_count / speed
+            eta = ongoing_count / speed if speed > 0 else 'Infinite'
             output += 'Download: {} items | Average: {} item/h | ETA: {} hours'.format(progress_count, speed, eta)
             self.db.set({'average': floor(average)})
         self.db.set({'last_saved_count': saved_count})
@@ -169,6 +171,66 @@ class EmailNotifier(Notifier):
         if self.scheduler.state != STATE_STOPPED:
             self.scheduler.shutdown(wait=False)
 
-    def _format_addr(self, s):
+    @staticmethod
+    def _format_addr(s):
         name, addr = parseaddr(s)
         return formataddr((Header(name, 'utf-8').encode(), addr))
+
+
+class TelegramNotifier(Notifier):
+
+    def __init__(self, databases: List[Database], ongoing: str, saved: str, period: int,
+                 token: str, chat_id: str, proxy: dict = None, background: bool = False):
+        super(TelegramNotifier, self).__init__(databases, ongoing, saved, period, background)
+        if proxy is not None:
+            self.updater = ext.Updater(token=token, request_kwargs={'proxy_url': proxy})
+        else:
+            self.updater = ext.Updater(token=token)
+        self.dispatcher = self.updater.dispatcher
+        self.dispatcher.add_handler(ext.CommandHandler('start', self.reply_start))
+        self.dispatcher.add_handler(ext.CommandHandler('stop', self.reply_stop))
+        self.dispatcher.add_handler(ext.CommandHandler('help', self.reply_help))
+        self.dispatcher.add_handler(ext.CommandHandler('watch', self.reply_watch))
+        self.dispatcher.add_error_handler(self.handle_error)
+        self.chat_id = chat_id
+
+    @staticmethod
+    def reply_start(_, update):
+        update.message.reply_text('Welcome to Court Spider Notifier. '
+                                  'The Notifier is used to monitor the status of Spider.'
+                                  'Reply /help for command list.')
+
+    @staticmethod
+    def reply_help(_, update):
+        update.message.reply_text('/help: Show the help message\n'
+                                  '/stop: Quit the bot\n'
+                                  '/watch: Display the status of Spider')
+
+    def reply_watch(self, _, update):
+        update.message.reply_text(self.watch())
+
+    def reply_stop(self, _, update):
+        update.message.reply_text('Goodbye.')
+        self.exit()
+
+    def interval_reply(self, bot, _):
+        bot.send_message(chat_id=self.chat_id, text=self.watch())
+
+    def handle_error(self, _, update, error):
+        """Log Errors caused by Updates."""
+        self.logger.warning('Update "%s" caused error "%s"', update, error)
+
+    def run(self):
+        self.updater.start_polling()
+        self.updater.job_queue.run_repeating(callback=self.interval_reply, interval=self.period * 60, first=0)
+        self.logger.info('Bot running.')
+        self.updater.idle()
+
+    def login(self):
+        pass
+
+    def work(self):
+        pass
+
+    def exit(self):
+        self.updater.stop()

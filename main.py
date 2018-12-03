@@ -8,6 +8,8 @@ import argparse
 from datetime import datetime
 from multiprocessing import Pool
 
+import pymongo
+
 import config
 from log import Log
 from spider import Spider
@@ -263,16 +265,21 @@ def read_content_list():
     logger = Log.create_logger('downloader')
     total = 0
     available = 0
+    duplicate = 0
     data_dir = './temp'
     logger.info('Downloader reading contents from local files in {0}.'.format(data_dir))
     pattern = re.compile(r"{'id': '(.+?)',")
     database = RedisSet('spider')
+    mongo = MongoDB('文书')
+    index = [('文书ID', pymongo.HASHED)]
+    mongo.create_index(index)
 
     for data_file_name in os.listdir(data_dir):
         if data_file_name[-4:] != '.txt':
             continue
         total_per_file = 0
         available_per_file = 0
+        duplicate_per_file = 0
         with open(os.path.join(data_dir, data_file_name), 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 line = line.strip()
@@ -281,17 +288,24 @@ def read_content_list():
                     if len(res) > 0:
                         case_id = res[0]
                         total_per_file += 1
-                        if database.add(case_id) > 0:
-                            available_per_file += 1
+                        if mongo.count({'文书ID': case_id}, hint=index) <= 0:
+                            if database.add(case_id) > 0:
+                                available_per_file += 1
+                        else:
+                            duplicate_per_file += 1
                     else:
                         logging.info('ID not found: {0}.'.format(line))
-        logger.info('Retrieve {0} / {1} from {2}.'.format(available_per_file, total_per_file, data_file_name))
+        logger.info(
+            'Retrieve {0} / {1} from {2}, {3} duplicated in MongoDB.'.format(
+                available_per_file, total_per_file, data_file_name, duplicate_per_file))
         total += total_per_file
         available += available_per_file
+        duplicate += duplicate_per_file
 
-    logger.info('Data retrieved from local file: {} total, {} available.'.format(total, available))
+    logger.info('Data retrieved from local file: {} total, {} available, {} duplicated in MongoDB.'.format(
+        total, available, duplicate))
     logger.info('Total {} items in redis database.'.format(database.count()))
-    return total, available
+    return total, available, duplicate
 
 
 def download():
