@@ -10,7 +10,8 @@ class Log:
     def create_logger(name: str):
         logger = logging.getLogger(name)
         logger.propagate = False
-        formatter = logging.Formatter(fmt='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        formatter = logging.Formatter(fmt='[%(levelname)s]\t%(asctime)s %(message)s',
+                                      datefmt='%Y-%m-%d %H:%M:%S')
         file_handler = logging.FileHandler(
             './log/log_{0}_{1}_{2}.txt'.format(datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), name, os.getpid()),
             encoding='utf-8', mode='a')

@@ -28,7 +28,7 @@ def main():
         print('Python >= 3.5 is required, you are using {}.{}.'.format(sys.version_info.major, sys.version_info.minor))
         exit(1)
 
-    logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+    logging.basicConfig(format='[%(levelname)s]\t%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
                         level=logging.INFO)
 
     parser = argparse.ArgumentParser(description='Court Spider')
