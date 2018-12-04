@@ -144,7 +144,7 @@ def crawl_by_district():
                 start = True
 
             # Log the distribution of district
-            with open('district_list.txt', 'w', encoding='utf-8') as f:
+            with open('./temp/district_list.txt', 'w', encoding='utf-8') as f:
                 district_list = list(spider.district(condition=c))
                 if len(district_list) <= 0:
                     logger.error('No district found, maybe wrong search condition input.')

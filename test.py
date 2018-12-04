@@ -61,7 +61,7 @@ def test_court():
     from session import Session
     from condition import Condition
     from spider import Spider
-    from parameter import Parameter
+    # from parameter import Parameter
     from datetime import datetime
     s = Session()
     c = Condition().district('北京市')
@@ -123,23 +123,25 @@ def test_download():
 
 
 def test_notifier():
-    from notifier import WeChatNotifier, EmailNotifier, Notifier, TelegramNotifier
+    from notifier import Notifier, WeChatNotifier, EmailNotifier, TelegramNotifier
     from persistence import RedisSet, MongoDB, LocalFile
-    import logging
-    import config
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        level=logging.INFO)
-    n = TelegramNotifier(
-        [RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
-         LocalFile('./download')],
-        ongoing='spider', saved='文书', period=1, token=config.Config.notifier.telegram.token,
-        chat_id=config.Config.notifier.telegram.chat_id, proxy=config.Config.notifier.telegram.proxy)
+    # import logging
+    # import config
+    # logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    #                     level=logging.INFO)
+    # n = TelegramNotifier(
+    #     [RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
+    #      LocalFile('./download')],
+    #     ongoing='spider', saved='文书', period=1, token=config.Config.notifier.telegram.token,
+    #     chat_id=config.Config.notifier.telegram.chat_id, proxy=config.Config.notifier.telegram.proxy)
     # n = EmailNotifier([RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
     #                    LocalFile('./download')],
     #                   ongoing='spider', saved='文书', period=1, sender='thesharing@163.com', password='HZL04291316wy',
     #                   server_addr="smtp.163.com")
-
-    n.run()
+    n = Notifier(
+        [RedisSet('spider'), RedisSet('finish'), RedisSet('progress'), RedisSet('failed'), MongoDB('文书'),
+         LocalFile('./download')], ongoing='spider', saved='文书', period=10)
+    print(n.watch())
 
 
 if __name__ == '__main__':

@@ -207,7 +207,11 @@ class TelegramNotifier(Notifier):
                                   '/watch: Display the status of Spider')
 
     def reply_watch(self, _, update):
-        update.message.reply_text(self.watch())
+        output = ''
+        for database in self.databases:
+            count = database.count()
+            output += '{0}({1}): {2} items | '.format(database.name, database.type, count)
+        update.message.reply_text(output)
 
     def reply_stop(self, _, update):
         update.message.reply_text('Goodbye.')
