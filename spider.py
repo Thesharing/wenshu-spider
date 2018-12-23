@@ -1,7 +1,6 @@
 import json
 import execjs
 import re
-import os
 from urllib import parse
 from datetime import datetime, timedelta
 import logging
@@ -26,7 +25,7 @@ class Spider:
             js = f.read()
             self.js_docid = execjs.compile(js)
 
-    def content_list(self, param: Parameter, page, order, direction, index=1) -> (dict, int):
+    def content_list(self, param: Parameter, page, order, direction, index=1, total=0) -> (dict, int):
         """
         获取内容列表
         page: 每页几条
@@ -34,7 +33,6 @@ class Spider:
         direction: 顺序 (asc - 正序 desc - 倒序)
         """
 
-        total = 0
         count = 0
 
         json_error_retry_time = 5
@@ -299,8 +297,6 @@ class Spider:
         period_length = [90, 30, 10, 5, 1]
         quark = len(period_length) - 1
         period_loop = [4, 3, 3, 2, 5]
-
-        # TODO: Fix a time bug
 
         def split(start: datetime, period: int):
             # 0 - 90天; 1 - 30天; 2 - 10天; 3 - 1天

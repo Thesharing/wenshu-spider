@@ -15,7 +15,7 @@ from log import Log
 from spider import Spider
 from util import git_date
 from parameter import Parameter
-from error import ExceptionList
+from error import ExceptionList, DocNotFoundError
 from condition import Condition
 from downloader import Downloader
 from session import Session, test_proxy
@@ -90,7 +90,7 @@ def main():
     elif args.function == 'spider' or args.function == 's':
         # Run single instance of spider
         if args.type == 'date':
-            pass
+            raise NotImplementedError
         elif args.type == 'district':
             crawl_by_district()
 
@@ -206,7 +206,8 @@ def crawl_by_district():
                                                     for item, idx in spider.content_list(
                                                             param=Parameter(param=str(c3),
                                                                             sess=s),
-                                                            page=20, order='法院层级', direction='asc', index=index):
+                                                            page=20, order='法院层级', direction='asc',
+                                                            index=index, total=court[3]):
                                                         print(item, file=data_file)
                                                         index = min(idx + 1, 10)
                                                     break
@@ -230,7 +231,8 @@ def crawl_by_district():
                                         for item, idx in spider.content_list(
                                                 param=Parameter(param=str(c2),
                                                                 sess=s),
-                                                page=20, order='法院层级', direction='asc', index=index):
+                                                page=20, order='法院层级', direction='asc',
+                                                index=index, total=time_interval[2]):
                                             print(item, file=data_file)
                                             index = min(idx + 1, 10)
                                         break
@@ -351,6 +353,12 @@ def download():
                     progress.remove(doc_id)
                     failed.add(doc_id)
                     break
+
+            except DocNotFoundError:
+                logging.critical('Doc not exists in source site: {0}'.format(doc_id))
+                progress.remove(doc_id)
+                failed.add(doc_id)
+                break
 
     # Put all item_id in progress in last session back to the waiting pool
     idx = 0

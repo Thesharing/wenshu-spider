@@ -5,11 +5,11 @@ from urllib import parse
 from bs4 import BeautifulSoup as Soup
 from bs4.element import NavigableString
 import json
-import execjs
+# import execjs
 
 from session import Session
 from persistence import MongoDB
-from error import CheckCodeError
+from error import CheckCodeError, DocNotFoundError
 
 
 class Downloader:
@@ -24,7 +24,7 @@ class Downloader:
             'court_date': re.compile(r'\"PubDate\":\"(.*?)\"'),
             'court_content': re.compile(r'\"Html\":\"(.*?)\"'),
             'case_info': re.compile(r'JSON.stringify\((.*?)\);'),
-            'extra_data': re.compile(r'\(function\(\){var dirData = (.*?);if')
+            # 'extra_data': re.compile(r'var jsonHtmlData = (.*?);')
         }
         with open('./html/content.html', 'r', encoding='utf-8') as f:
             self.html = f.read()
@@ -49,6 +49,9 @@ class Downloader:
 
         if '访问验证' in raw_data or 'VisitRemind' in raw_data or '并刷新该页' in raw_data:
             raise CheckCodeError('CheckCode Appeared in _get_court_info')
+
+        if '此篇文书不存在' in raw_data:
+            raise DocNotFoundError('Doc {0} not exists in source site'.format(doc_id))
 
         with open('./content/{}.txt'.format(doc_id), 'w', encoding='utf-8') as f:
             f.write(raw_data)
@@ -130,21 +133,21 @@ class Downloader:
                     content['FULLTEXT'].append(element.string)
                     content[present_tag].append(element.string)
 
-        extra_data = execjs.eval(self.pattern['extra_data'].findall(raw_data)[0].replace('"', "'"))
-        relate_info = dict()
-        if 'RelateInfo' in extra_data:
-            for item in extra_data['RelateInfo']:
-                relate_info[item['name']] = item['value']
-        legal_base = list()
-        if 'LegalBase' in extra_data:
-            for law in extra_data['LegalBase']:
-                law_item = dict(法规名称=law['法规名称'] if '法规名称' in law else None, 法规内容=list())
-                if 'Items' in law:
-                    for legal in law['Items']:
-                        law_item['法规内容'].append(dict(法条名称=legal['法条名称'] if '法条名称' in legal else None,
-                                                     法条内容=list(i.strip() for i in legal['法条内容'].split('[ly]') if
-                                                               len(i.strip()) > 0) if '法条内容' in legal else None))
-                legal_base.append(law_item)
+        # extra_data = execjs.eval(self.pattern['extra_data'].findall(raw_data)[0].replace('"', "'"))
+        # relate_info = dict()
+        # if 'RelateInfo' in extra_data:
+        #     for item in extra_data['RelateInfo']:
+        #         relate_info[item['name']] = item['value']
+        # legal_base = list()
+        # if 'LegalBase' in extra_data:
+        #     for law in extra_data['LegalBase']:
+        #         law_item = dict(法规名称=law['法规名称'] if '法规名称' in law else None, 法规内容=list())
+        #         if 'Items' in law:
+        #             for legal in law['Items']:
+        #                 law_item['法规内容'].append(dict(法条名称=legal['法条名称'] if '法条名称' in legal else None,
+        #                                              法条内容=list(i.strip() for i in legal['法条内容'].split('[ly]') if
+        #                                                        len(i.strip()) > 0) if '法条内容' in legal else None))
+        #         legal_base.append(law_item)
 
         case_info = json.loads(self.pattern['case_info'].findall(raw_data)[0])
 
@@ -152,8 +155,8 @@ class Downloader:
 
         return dict(文书ID=case_info['文书ID'] if '文书ID' in case_info else None,
                     案件名称=case_info['案件名称'] if '案件名称' in case_info else None,
-                    案号=case_info['案号'] if '案号' in case_info else None,
-                    案件类型=relate_info['案件类型'] if '案件类型' in relate_info else None,
+                    案号=case_info['案号'] if '案号' in case_info else None,  # Need a conversion
+                    案件类型=case_info['案件类型'] if '案件类型' in case_info else None,
                     法院=dict(法院ID=case_info['法院ID'] if '法院ID' in case_info else None,
                             法院名称=case_info['法院名称'] if '法院名称' in case_info else None,
                             法院区域=case_info['法院区域'] if '法院区域' in case_info else None,
@@ -162,9 +165,9 @@ class Downloader:
                             法院区县=case_info['法院区县'] if '法院区县' in case_info else None),
                     审判程序=case_info['审判程序'] if '审判程序' in case_info else None,
                     文书类型=case_info['文书类型'] if '文书类型' in case_info else None,
-                    案由=relate_info['案由'] if '案由' in relate_info else None,
-                    裁判日期=relate_info['裁判日期'] if '裁判日期' in relate_info else None,
-                    当事人=relate_info['当事人'].split(',') if '当事人' in relate_info else None,
+                    # 案由=relate_info['案由'] if '案由' in relate_info else None,
+                    裁判日期=case_info['裁判日期'] if '裁判日期' in case_info else None,
+                    # 当事人=relate_info['当事人'].split(',') if '当事人' in relate_info else None,
                     正文=dict(文本首部=content['WBSB'] if 'WBSB' in content else None,
                             诉讼人参与信息=content['DSRXX'] if 'DSRXX' in content else None,
                             诉讼记录=content['SSJL'] if 'SSJL' in content else None,
@@ -178,8 +181,8 @@ class Downloader:
                     文书全文类型=case_info['文书全文类型'] if '文书全文类型' in case_info else None,
                     结案方式=case_info['结案方式'] if '结案方式' in case_info else None,
                     效力层级=case_info['效力层级'] if '效力层级' in case_info else None,
-                    不公开理由=case_info['不公开理由'] if '不公开理由' in case_info else None,
-                    法律依据=legal_base)
+                    不公开理由=case_info['不公开理由'] if '不公开理由' in case_info else None)
+        # 法律依据=legal_base)
 
     def _persist(self, doc_id, data):
         if data is None:

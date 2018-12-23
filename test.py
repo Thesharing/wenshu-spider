@@ -119,7 +119,7 @@ def test_download():
     s = Session()
     db = MongoDB(config.Config.search.reason.value)
     d = Downloader(sess=s, db=db)
-    d.download_doc('6ae92d76-c63b-4298-bb31-a89d01085071')
+    d.download_doc('d71drcf9-bfaa-4a9f-8b31-9d574dd44c83')
 
 
 def test_notifier():
@@ -145,4 +145,4 @@ def test_notifier():
 
 
 if __name__ == '__main__':
-    test_notifier()
+    test_download()

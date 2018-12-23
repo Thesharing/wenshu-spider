@@ -3,34 +3,40 @@ from requests.exceptions import ChunkedEncodingError, RequestException
 from execjs._exceptions import ProgramError
 
 
-class NetworkException(Exception):
-
+class SpiderException(Exception):
     def __init__(self, value):
         self.value = value
+
+    def __str__(self):
+        return self.value
+
+
+class NetworkException(SpiderException):
+
+    def __init__(self, value):
+        super(NetworkException, self).__init__(value)
         self.msg = 'Network Error'
 
-    def __str__(self):
-        return self.value
 
-
-class CheckCodeError(Exception):
+class CheckCodeError(SpiderException):
 
     def __init__(self, value):
-        self.value = value
+        super(SpiderException, self).__init__(value)
         self.msg = 'CheckCode Error'
 
-    def __str__(self):
-        return self.value
 
-
-class NullContentError(Exception):
+class NullContentError(SpiderException):
 
     def __init__(self, value):
-        self.value = value
+        super(NullContentError, self).__init__(value)
         self.msg = 'Null Content Error'
 
-    def __str__(self):
-        return self.value
+
+class DocNotFoundError(SpiderException):
+
+    def __init__(self, value):
+        super(DocNotFoundError, self).__init__(value)
+        self.msg = 'Doc not found'
 
 
 ExceptionList = (NetworkException, CheckCodeError, JSONDecodeError,
